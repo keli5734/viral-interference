@@ -1,0 +1,205 @@
+library(tidyverse)
+library(gridExtra)
+
+lyt_region <- rep(factor(c(3,1,1)), times = c(52,52,52))
+
+rsv_data <- readRDS("code_figures/clean_data_rsv.rds") %>% 
+  filter(regions %in% c("Region 1", "Region 4", "Region 8", "Region 10")) %>% 
+  filter(season == "2008-2009" | season == "2009-2010" | season == "2010-2011")  %>% 
+  mutate(lty = rep(lyt_region, 4))
+
+flu_data <- readRDS("code_figures/clean_data_flu.rds") %>% 
+  filter(regions %in% c("Region 1", "Region 4", "Region 8", "Region 10")) %>% 
+  filter(season == "2008-2009" | season == "2009-2010" | season == "2010-2011")  %>% 
+   mutate(lty = rep(lyt_region, 4))
+
+
+shaded_data <- flu_data %>% filter(date >= "2009-04-01" & date <= "2010-05-01")
+
+Figure1A <- ggplot() + 
+  geom_ribbon(data = shaded_data, 
+              aes(x = as.Date(date), ymin = 0, ymax = 2), 
+              fill = "grey", alpha = 0.3) + 
+  geom_line(data = rsv_data, 
+            aes(x = as.Date(date), y = scaled.cases/1000, color = "RSV", linetype = lty), linewidth = 3) + 
+  geom_line(data = flu_data, 
+            aes(x = as.Date(date), y = scaled.cases.pdm/1000,  color = "Influenza"), linewidth = 3) +
+  geom_vline(xintercept = as.Date("2009-01-01"), linetype = "dashed", color = "grey", linewidth = 1.2) +   
+  geom_vline(xintercept = as.Date("2010-01-01"), linetype = "dashed", color = "grey", linewidth = 1.2) +   
+  geom_vline(xintercept = as.Date("2011-01-01"), linetype = "dashed", color = "grey", linewidth = 1.2) +   
+   
+  labs(title = "",
+       y = "Incidence per 1000",
+       x = "Year") +
+  theme_minimal()  + 
+  theme(text = element_text(size = 40)) + 
+  theme(axis.text.x = element_text(color="black", 
+                                   size=40, angle=0),
+        axis.text.y = element_text(color="black", 
+                                   size=40, angle=0))  + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  facet_wrap(~regions, 
+             nrow = 4,
+             labeller = labeller(regions = 
+                                   c("Region 1" = "Region 1: CT, ME, MA, NH, RI, VT",
+                                     "Region 4" = "Region 4: AL, FL, GA, KY, MS, NC, SC, TN",
+                                     "Region 8" =  "Region 8: CO, MT, ND, SD, UT, WY ",
+                                     "Region 10" = "Region 10: AK, ID, OR, WA"))) + 
+  #theme(strip.text = element_text(face = "bold")) +   # Make facet title text bold)  
+  theme(strip.text = element_text(size = 30, margin = margin(), face = "bold"),
+        strip.background = element_rect(fill = "white", color = "transparent"))+
+  scale_y_continuous(breaks=c(0,.5,1,1.5))  + 
+  scale_color_manual(values = c("RSV" = "black", "Influenza" = "brown"),
+                     name = "",
+                     labels = c("pdmH1N1", "RSV")) + 
+  theme(legend.position = "top") + 
+  guides(linetype = "none")  # Hide the linetype legend specifically
+
+
+Figure1A
+
+# Figure1A +
+#   annotation_custom(
+#     grob = ggplotGrob(legend_ts),
+#     xmin = 0, xmax = 20, ymin = 2*max(rsv_cluster$scaled.cases/1000)/4 , ymax = max(rsv_cluster$scaled.cases/1000)
+#   )
+
+
+#legend_ts <- cowplot::get_legend(Figure1A)
+
+
+
+
+rsv <- readRDS("code_figures/clean_data_rsv.rds") 
+
+heatmap_weight <- list()
+
+rsv <- rsv %>% 
+  group_by(regions, season) %>% 
+  mutate(weight = scaled.cases/sum(scaled.cases)) %>% 
+  ungroup()
+
+for(i in c(1,4,8,10)){
+  
+  rsv_weight <- rsv %>% 
+    filter(regions == paste0("Region ",i))  %>% 
+    filter(season != "2006-2007") 
+  
+  ts_len <- length(rsv_weight$regions)
+  
+  season <- unique(rsv_weight$season)
+  week <- unique(rsv_weight$wk)
+  
+  heatmap_weight[[i]]<- expand.grid(week=week,season=season)
+  heatmap_weight[[i]]$weight <- rsv_weight$weight
+  
+  
+  heatmap_weight[[i]] <- heatmap_weight[[i]] %>% 
+    group_by(season) %>% 
+    mutate(Weight = weight/max(weight, na.rm = TRUE))
+}
+
+
+heatmap_weight_plot_rsv <- data.frame(week = rep(rep(c(1:52), length.out= ts_len), 4),
+                                      season = rep(rep(season, each = 52), 4),
+                                      Weight = c(heatmap_weight[[1]]$Weight,
+                                                 heatmap_weight[[4]]$Weight,
+                                                 heatmap_weight[[8]]$Weight,
+                                                 heatmap_weight[[10]]$Weight
+                                      ),
+                                      regions = rep(unique(rsv$regions)[c(1,4,8,10)], each = ts_len))
+
+# heatmap_weight_plot <- data.frame(week = rep(heatmap_weight[[1]]$week, 10),
+#                                   season = rep(heatmap_weight[[1]]$season, 10),
+#                                   Weight = c(unlist(heatmap_weight[[1]]$Weight),
+#                                              unlist(heatmap_weight[[2]]$Weight),
+#                                              unlist(heatmap_weight[[3]]$Weight),
+#                                              unlist(heatmap_weight[[4]]$Weight),
+#                                              unlist(heatmap_weight[[5]]$Weight),
+#                                              unlist(heatmap_weight[[6]]$Weight),
+#                                              unlist(heatmap_weight[[7]]$Weight),
+#                                              unlist(heatmap_weight[[8]]$Weight),
+#                                              unlist(heatmap_weight[[9]]$Weight),
+#                                              unlist(heatmap_weight[[10]]$Weight)
+#                                              ),
+#                                   regions = rep(unique(rsv$regions), each = 676))
+#                                                 
+
+#gravity_rsv_median <- gravity.rsv %>% group_by(regions) %>% summarise(median = mean(gravity))
+
+#Heatmap
+
+highlight_cells <- data.frame(
+  xmin=c(rep(1,8)),
+  xmax=c(rep(52,8)),
+  ymin=c(rep('2009-2010',8)),
+  ymax=c(rep('2009-2010',8))
+)
+
+
+p1 <- ggplot(heatmap_weight_plot_rsv, aes(week, season, group = season, fill= Weight), color = "gray", alpha = 0.5) +
+  geom_tile() +
+  scale_fill_distiller(  palette = "RdYlBu",
+                         limits = c(0, 1),
+                         name = "RSV activity") +
+  labs(title = "",
+       x = "Week",
+       y = "Season") +
+  theme_minimal() +
+  theme(legend.position="right", legend.direction="vertical",
+        legend.title=element_text(colour="black",size = 30,  face = "bold"),
+        legend.text=element_text(colour="black", size = 30, face="bold"),
+        legend.key.height=grid::unit(8, "mm"),
+        legend.key.width=grid::unit(4, "mm"),
+        strip.text.x = element_text(size = 20, color = "black", face = "bold"),
+        plot.title = element_text(hjust = 0.5),
+        text = element_text(size = 40))  +
+  theme(text = element_text(size = 40)) +
+  theme(axis.text.x = element_text(color="black",
+                                   size=40, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=25, angle=0))  +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~regions, nrow = 4,
+             labeller = labeller(regions =
+                                   c("Region 1" = "Region 1: CT, ME, MA, NH, RI, VT",
+                                     #"Region 2" = "Region 2: NJ, NY, PR, VI",
+                                     #"Region 3" = "Region 3: DE, DC, MD, PA, VA, WV",
+                                     "Region 4" = "Region 4: AL, FL, GA, KY, MS, NC, SC, TN",
+                                     #"Region 5" = "Region 5: IL, IN, MI, MN, OH, WI",
+                                     #"Region 6" = "Region 6: AR, LA, NM, OK, TX",
+                                     #"Region 7" = "Region 7: IA, KS, MO, NE",
+                                     "Region 8" = "Region 8: CO, MT, ND, SD, UT, WY ",
+                                     "Region 10" = "Region 10: AK, ID, OR, WA"))) + 
+  # "Region 9" = "Region 9: AZ, CA, HI, NV"))) + 
+  #"Region 10" = "Region 10: AK, ID, OR, WA"))) +
+  theme(strip.text.x = element_text(size = 0, margin = margin()))+
+  scale_x_continuous(breaks=c(10,30,50)) +
+  scale_y_discrete(labels = c("2007/08", "2008/09",
+                              "2009/10", "2010/11", "2011/12",
+                              "2012/13", "2013/14", "2014/15",
+                              "2015/16", "2016/17", "2017/18",
+                              "2018/19")) +
+  guides(color = NA)   + 
+  annotate("rect", xmin = min(heatmap_weight_plot_rsv$week), 
+           xmax = max(heatmap_weight_plot_rsv$week),
+           ymin = 3 - 0.5, ymax = 3 + 0.5, alpha = .1, color = "black", size = 1.4)
+ 
+
+
+# 
+# p1
+#ggsave("code_figures/heatmap/heatmap_rsv.pdf", width = 22, height = 18, unit = "in", dpi = 300) 
+# 
+gp1<-ggplotGrob(Figure1A)
+gp2<-ggplotGrob(p1)
+#
+g <- arrangeGrob(gp1,gp2, ncol= 2, widths=c(5,5))
+ 
+ggsave("Paper_figures/Figure1.pdf", g, width = 22, height = 20, unit = "in", dpi = 300)
+
+
