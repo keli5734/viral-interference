@@ -1,0 +1,140 @@
+library(tidyverse)
+library(gridExtra)
+library(ggpubr)
+data <- readRDS("code_figures/gravity_flu.rds")
+
+flu_intensity <- read_rds("code_figures/intensity_flu2.rds") %>% 
+  arrange(regions)
+
+
+rsv_intensity <- readRDS("code_figures/intensity_rsv2.rds")
+rsv_intensity1 <- rsv_intensity %>% filter(seasons == "2009-2010")
+rsv_intensity2 <- rsv_intensity %>% filter(seasons == "2010-2011")
+
+values <- unique(data1$X1_norm)
+values2 <- unique(data2$X1_norm)
+
+dataset <- data.frame(intensity_rsv1 = rsv_intensity1$intensity, 
+                      intensity_rsv2 = rsv_intensity2$intensity, 
+                      intensity_flu = flu_intensity$intensity,
+                      gravity = data$gravity,
+                      regions = rsv_intensity1$regions, 
+                      value = values,
+                      value2 = values2) 
+  
+
+custom_palette_intensity <- colorRampPalette(c("#8c510a", "#bf812d", "#dfc27d", "#f5f5f5", "#80cdc1",
+                                               "#35978f", "#01665e"))
+
+ 
+
+ 
+
+g1 <- ggplot(data = dataset, aes(x = intensity_flu, y = intensity_rsv1, color = value)) +
+  geom_point(size = 10) +
+  scale_color_gradientn(colors = custom_palette_intensity(7)) +
+  labs(
+    x = "Influenza intensity",
+    y = "RSV intensity (2009/10)",
+    title = "",
+    #title = "Scatter Plot of Intensity",
+    #subtitle = "Grouped by Value",
+    #caption = "Data source: Your Source"
+  ) +
+  geom_smooth(method = "lm", se = FALSE, 
+              color = "black", linewidth = 2, alpha = .5, linetype = "solid" ) +  # Linear regression line
+  ylim(0, 8) + 
+  xlim(0, 8) +
+  theme_bw() +
+  theme(legend.position="NA", 
+        strip.text.x = element_text(size = 20, color = "black", face = "bold"),
+        plot.title = element_text(hjust = 0.5),
+        text = element_text(size = 25))  +
+  theme(text = element_text(size = 25)) +
+  theme(axis.text.x = element_text(color="black",
+                                   size=25, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=25, angle=0))  +
+  theme( panel.grid.minor = element_blank(),
+         panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+
+g1
+#ggsave("code_figures/Figures/.pdf", g, width = 22, height = 20, unit = "in", dpi = 300)
+
+
+
+
+g2 <- ggplot(data = dataset, aes(x = intensity_flu, y = intensity_rsv2, color = value2)) +
+  geom_point(size = 10) +
+  scale_color_gradientn(colors = custom_palette_intensity(7)) +
+  labs(
+    x = "Influenza intensity",
+    y = "RSV intensity (2010/11)",
+    title = "",
+    #title = "Scatter Plot of Intensity",
+    #subtitle = "Grouped by Value",
+    #caption = "Data source: Your Source"
+  ) +
+  geom_smooth(method = "lm", se = FALSE, 
+              color = "black", linewidth = 2, alpha = .5, linetype = "solid" ) +  # Linear regression line
+  ylim(0, 8) + 
+  xlim(0, 8) +
+  theme_bw() +
+  theme(legend.position="NA", 
+        strip.text.x = element_text(size = 20, color = "black", face = "bold"),
+        plot.title = element_text(hjust = 0.5),
+        text = element_text(size = 25))  +
+  theme(text = element_text(size = 25)) +
+  theme(axis.text.x = element_text(color="black",
+                                   size=25, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=25, angle=0))  +
+  theme( panel.grid.minor = element_blank(),
+         panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+g2
+
+
+g <-ggarrange(g1, g2,
+              ncol = 2, 
+              labels = c("A","B"),
+              font.label = list(size = 20, color = "black"))
+
+
+ggsave("Paper_figures/Figure4.pdf", g, width = 10, height = 5, unit = "in", dpi = 300)
+
+
+
+
+g3 <- ggplot(data = dataset, aes(x = intensity_rsv1, y = intensity_rsv2, color = value)) +
+  geom_point(size = 8) +
+  scale_color_gradientn(colors = custom_palette_intensity(7)) +
+  labs(
+    x = "RSV intensity (2009/10)",
+    y = "RSV intensity (2010/11)",
+    title = "",
+    #title = "Scatter Plot of Intensity",
+    #subtitle = "Grouped by Value",
+    #caption = "Data source: Your Source"
+  ) +
+  geom_smooth(method = "lm", se = FALSE, 
+              color = "black", linewidth = 1.7, alpha = .5, linetype = "solid" ) +  # Linear regression line
+  ylim(0, 8) + xlim(0, 8) +
+  theme_bw() +
+  theme(legend.position="NA", 
+        strip.text.x = element_text(size = 20, color = "black", face = "bold"),
+        plot.title = element_text(hjust = 0.5),
+        text = element_text(size = 20))  +
+  theme(text = element_text(size = 20)) +
+  theme(axis.text.x = element_text(color="black",
+                                   size=20, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=20, angle=0))  +
+  theme( panel.grid.minor = element_blank(),
+         panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+g3
+
+
+ 
