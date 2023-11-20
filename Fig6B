@@ -1,0 +1,617 @@
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+library(viridis)  
+library(dplyr)
+library(zoo)
+library(adephylo)
+library(cowplot)
+library(gridExtra)
+library(lubridate)
+library(lattice)
+library(grid)
+library(ggpubr)
+library(ape)
+library(latex2exp)
+source("LHS_M2.R") # parameter values
+source("ts_WithOut_interaction.R")
+nn <- 1
+
+# predicted_traj1 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run1.rds")), function(df) df$rsv)
+# predicted_traj2 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run2.rds")), function(df) df$rsv)
+# predicted_traj3 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run3.rds")), function(df) df$rsv)
+# predicted_traj4 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run4.rds")), function(df) df$rsv)
+# predicted_traj5 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run5.rds")), function(df) df$rsv)
+# predicted_traj6 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run6.rds")), function(df) df$rsv)
+# predicted_traj7 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run7.rds")), function(df) df$rsv)
+# predicted_traj8 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run8.rds")), function(df) df$rsv)
+# predicted_traj9 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run9.rds")), function(df) df$rsv)
+# predicted_traj10 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run10.rds")), function(df) df$rsv)
+# 
+# 
+# predicted_traj <- c(predicted_traj1,predicted_traj2, predicted_traj3,
+#                     predicted_traj4,predicted_traj5, predicted_traj6,
+#                     predicted_traj7,
+#                     predicted_traj8,predicted_traj9, predicted_traj10)
+# 
+# ## Influenza ##
+# 
+# predicted_traj1 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run1.rds")), function(df) df$flu)
+# predicted_traj2 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run2.rds")), function(df) df$flu)
+# predicted_traj3 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run3.rds")), function(df) df$flu)
+# predicted_traj4 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run4.rds")), function(df) df$flu)
+# predicted_traj5 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run5.rds")), function(df) df$flu)
+# predicted_traj6 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run6.rds")), function(df) df$flu)
+# predicted_traj7 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run7.rds")), function(df) df$flu)
+# predicted_traj8 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run8.rds")), function(df) df$flu)
+# predicted_traj9 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run9.rds")), function(df) df$flu)
+# predicted_traj10 <- lapply(readRDS(paste0("M1_Region",nn,"/ts_M1_",nn,"_run10.rds")), function(df) df$flu)
+# 
+# 
+# 
+# predicted_traj_flu <- c(predicted_traj1,predicted_traj2, predicted_traj3,
+#                         predicted_traj4,predicted_traj5, predicted_traj6,
+#                         predicted_traj7,
+#                         predicted_traj8,predicted_traj9, predicted_traj10)
+# 
+# 
+# 
+# 
+
+
+
+
+
+predicted_traj1 <- lapply(readRDS("M2_Region1/ts_M2_1_run1.rds"), function(df) df$rsv)
+predicted_traj2 <- lapply(readRDS("M2_Region1/ts_M2_1_run2.rds"), function(df) df$rsv)
+predicted_traj3 <- lapply(readRDS("M2_Region1/ts_M2_1_run3.rds"), function(df) df$rsv)
+predicted_traj4 <- lapply(readRDS("M2_Region1/ts_M2_1_run4.rds"), function(df) df$rsv)
+predicted_traj5 <- lapply(readRDS("M2_Region1/ts_M2_1_run5.rds"), function(df) df$rsv)
+predicted_traj6 <- lapply(readRDS("M2_Region1/ts_M2_1_run6.rds"), function(df) df$rsv)
+predicted_traj7 <- lapply(readRDS("M2_Region1/ts_M2_1_run7.rds"), function(df) df$rsv)
+predicted_traj8 <- lapply(readRDS("M2_Region1/ts_M2_1_run8.rds"), function(df) df$rsv)
+predicted_traj9 <- lapply(readRDS("M2_Region1/ts_M2_1_run9.rds"), function(df) df$rsv)
+predicted_traj10 <- lapply(readRDS("M2_Region1/ts_M2_1_run10.rds"), function(df) df$rsv)
+
+
+predicted_traj <- c(predicted_traj1, predicted_traj2,
+                    predicted_traj3, predicted_traj4,
+                    predicted_traj5, predicted_traj6,
+                    predicted_traj7, predicted_traj8,
+                    predicted_traj9, predicted_traj10)
+
+
+## Influenza ##
+
+predicted_traj1 <- lapply(readRDS("M2_Region1/ts_M2_1_run1.rds"), function(df) df$flu)
+predicted_traj2 <- lapply(readRDS("M2_Region1/ts_M2_1_run2.rds"), function(df) df$flu)
+predicted_traj3 <- lapply(readRDS("M2_Region1/ts_M2_1_run3.rds"), function(df) df$flu)
+predicted_traj4 <- lapply(readRDS("M2_Region1/ts_M2_1_run4.rds"), function(df) df$flu)
+predicted_traj5 <- lapply(readRDS("M2_Region1/ts_M2_1_run5.rds"), function(df) df$flu)
+predicted_traj6 <- lapply(readRDS("M2_Region1/ts_M2_1_run6.rds"), function(df) df$flu)
+predicted_traj7 <- lapply(readRDS("M2_Region1/ts_M2_1_run7.rds"), function(df) df$flu)
+predicted_traj8 <- lapply(readRDS("M2_Region1/ts_M2_1_run8.rds"), function(df) df$flu)
+predicted_traj9 <- lapply(readRDS("M2_Region1/ts_M2_1_run9.rds"), function(df) df$flu)
+predicted_traj10 <- lapply(readRDS("M2_Region1/ts_M2_1_run10.rds"), function(df) df$flu)
+
+
+
+predicted_traj_flu <- c(predicted_traj1, predicted_traj2,
+                        predicted_traj3, predicted_traj4,
+                        predicted_traj5, predicted_traj6,
+                        predicted_traj7, predicted_traj8,
+                        predicted_traj9, predicted_traj10)
+
+
+# predicted_traj1 <- lapply(readRDS("M3_Region1/ts_M3_1_run1.rds"), function(df) df$rsv)
+# predicted_traj2 <- lapply(readRDS("M3_Region1/ts_M3_1_run2.rds"), function(df) df$rsv)
+# predicted_traj3 <- lapply(readRDS("M3_Region1/ts_M3_1_run3.rds"), function(df) df$rsv)
+# predicted_traj4 <- lapply(readRDS("M3_Region1/ts_M3_1_run4.rds"), function(df) df$rsv)
+# predicted_traj5 <- lapply(readRDS("M3_Region1/ts_M3_1_run5.rds"), function(df) df$rsv)
+# predicted_traj6 <- lapply(readRDS("M3_Region1/ts_M3_1_run5.rds"), function(df) df$rsv)
+# predicted_traj7 <- lapply(readRDS("M3_Region1/ts_M3_1_run7.rds"), function(df) df$rsv)
+# predicted_traj8 <- lapply(readRDS("M3_Region1/ts_M3_1_run8.rds"), function(df) df$rsv)
+# predicted_traj9 <- lapply(readRDS("M3_Region1/ts_M3_1_run9.rds"), function(df) df$rsv)
+# predicted_traj10 <- lapply(readRDS("M3_Region1/ts_M3_1_run10.rds"), function(df) df$rsv)
+# 
+# 
+# predicted_traj <- c(predicted_traj1, predicted_traj2,
+#                     predicted_traj3, predicted_traj4,
+#                     predicted_traj5, predicted_traj6,
+#                     predicted_traj7, predicted_traj8,
+#                     predicted_traj9, predicted_traj10)
+# 
+# 
+# ## Influenza ##
+# predicted_traj1 <- lapply(readRDS("M3_Region1/ts_M3_1_run1.rds"), function(df) df$flu )
+# predicted_traj2 <- lapply(readRDS("M3_Region1/ts_M3_1_run2.rds"), function(df) df$flu )
+# predicted_traj3 <- lapply(readRDS("M3_Region1/ts_M3_1_run3.rds"), function(df) df$flu )
+# predicted_traj4 <- lapply(readRDS("M3_Region1/ts_M3_1_run4.rds"), function(df) df$flu )
+# predicted_traj5 <- lapply(readRDS("M3_Region1/ts_M3_1_run5.rds"), function(df) df$flu )
+# predicted_traj6 <- lapply(readRDS("M3_Region1/ts_M3_1_run5.rds"), function(df) df$flu )
+# predicted_traj7 <- lapply(readRDS("M3_Region1/ts_M3_1_run7.rds"), function(df) df$flu )
+# predicted_traj8 <- lapply(readRDS("M3_Region1/ts_M3_1_run8.rds"), function(df) df$flu )
+# predicted_traj9 <- lapply(readRDS("M3_Region1/ts_M3_1_run9.rds"), function(df) df$flu )
+# predicted_traj10 <- lapply(readRDS("M3_Region1/ts_M3_1_run10.rds"), function(df) df$flu )
+# 
+# 
+# 
+# predicted_traj_flu <- c(predicted_traj1, predicted_traj2,
+#                         predicted_traj3, predicted_traj4,
+#                         predicted_traj5, predicted_traj6,
+#                         predicted_traj7, predicted_traj8,
+#                         predicted_traj9, predicted_traj10)
+# 
+
+
+
+
+
+
+rsv_dataset <- readRDS("clean_data_rsv.rds")
+flu_dataset <- readRDS("clean_data_flu.rds")
+
+
+# 
+# flu_dataset %>% filter(regions == "Region 1") %>% 
+#   ggplot() + 
+#   geom_line(aes(x = date, y = scaled.cases.pdm), col = "red") + 
+#   geom_line(aes(x = date, y = scaled.cases.A), col = "blue")
+
+
+region_number <- 1
+
+ref_traj <- rsv_dataset %>% 
+  filter(regions == paste0("Region ",region_number)) %>% 
+  filter(season == "2009-2010" ) %>% #  | season == "2010-2011") %>% 
+  mutate(normalised_cases = scaled.cases/max(scaled.cases)) 
+
+ref_traj_flu <- flu_dataset %>% 
+  filter(regions == paste0("Region ",region_number)) %>% 
+  filter(season == "2009-2010" ) %>% #   | season == "2010-2011") %>% 
+  mutate(normalised_total_number_positive = scaled.cases.pdm/max(scaled.cases.pdm)) 
+
+
+# Create an empty vector to store the goodness of fit values
+goodness_of_fit_rsv <- numeric(N_sample_size)
+goodness_of_fit_flu <- numeric(N_sample_size)
+goodness_of_fit <- numeric(N_sample_size)
+
+N_tp <- 52
+
+scaling_factor <- rsv_dataset %>% 
+  filter(regions == paste0("Region ",region_number)) %>% 
+  filter(season == "2009-2010" ) %>% # | season == "2010-2011" ) %>% 
+  select(scaling.factor, total_number_test)
+
+
+scaling_factor_flu <- flu_dataset %>% 
+  filter(regions == paste0("Region ",region_number)) %>% 
+  filter(season == "2009-2010" ) %>% #  |season == "2010-2011") %>% 
+  select(scaling.factor, total_number_test)
+
+
+
+# Calculate the goodness of fit for each predicted trajectory
+for (i in 1:N_sample_size) {
+  prediction <- predicted_traj[[i]]
+  prediction <- prediction[1:N_tp]
+  
+  prediction_flu <- predicted_traj_flu[[i]]
+  prediction_flu <- prediction[1:N_tp]
+  
+  
+  goodness_of_fit_rsv[i] <- -sum(dpois(x = ref_traj$total_number_positive[1:N_tp], 
+                                       lambda = prediction/scaling_factor$total_number_test[1:N_tp],
+                                       #lambda = prediction * reporting_fraction,
+                                       log = TRUE))
+  
+  goodness_of_fit_flu[i] <- -sum(dpois(x = ref_traj_flu$total_number_positive.pdm[1:N_tp],
+                                       lambda = prediction_flu/scaling_factor_flu$total_number_test[1:N_tp],
+                                       #lambda = prediction * reporting_fraction,
+                                       log = TRUE))
+  
+  goodness_of_fit[i] <- goodness_of_fit_rsv[i] + goodness_of_fit_flu[i]
+  
+}
+
+
+# plot(prediction/scaling_factor$total_number_test)
+# lines(ref_traj$total_number_positive[1:N_tp])
+
+
+# qt <- 0.99
+# q5 <- quantile(goodness_of_fit, qt)
+# optimal_rank <- which(goodness_of_fit >= q5)
+# optim_traj <- predicted_traj[optimal_rank]
+# optim_traj1 <- lapply(optim_traj, function(vecotr) vecotr[1:N_tp])
+
+
+
+# Rank the trajectories by goodness of fit
+
+index_ranked_trajectories <- order(goodness_of_fit_rsv, decreasing = FALSE)
+
+
+
+len_indx <- 2000
+optimal_rank <- index_ranked_trajectories[1:len_indx]
+optim_traj <- predicted_traj[optimal_rank]
+optim_traj <- lapply(optim_traj, function(vector) vector[1:N_tp])
+
+
+
+
+theta1_value <- theta1[optimal_rank]
+med_value_theta1 <- median(theta1_value)
+# Calculate the absolute differences
+abs_diff <- abs(theta1_value - med_value_theta1)
+# Find the position of the element closest to its median
+closest_to_median_index <- which.min(abs_diff)
+
+
+#reporting_fraction <- 0.0008176215
+
+optim_traj <- unlist(optim_traj)
+optim_traj <- data.frame(cases = optim_traj, 
+                         season = rep(c(1:len_indx), each = N_tp)) 
+
+fit_parameters <-  readRDS("RSV_fit_results/parameter_R1.rds")
+reporting_fraction <- fit_parameters$reporting_fraction
+
+
+prediction_df1 <- data.frame(date = rep(ref_traj$date, length.out = N_tp*len_indx), 
+                             wk = rep(c(1:N_tp), length.out = N_tp * len_indx),
+                             cases = optim_traj$cases, 
+                             my_group = optim_traj$season) %>% 
+  group_by(my_group) %>% 
+  mutate(normalised_cases = cases/max(cases)) %>% 
+  mutate(scaled_cases = cases/scaling_factor$total_number_test[1:N_tp]) %>% 
+  mutate(scaled_cases2 = cases * reporting_fraction)
+
+
+
+prediction_med_df1 <- data.frame(date = ref_traj$date,
+                                 cases = optim_traj$cases[(N_tp*closest_to_median_index+1): (N_tp*closest_to_median_index+N_tp)]) %>% 
+  mutate(cases = cases * reporting_fraction)
+
+
+data_df1 <- data.frame(date = ref_traj$date, 
+                       cases = ref_traj$normalised_cases,
+                       cases2 = ref_traj$scaled.cases,
+                       cases3 = ref_traj$total_number_positive)
+
+
+optim_traj2 <- predicted_traj[optimal_rank]
+optim_traj2 <- lapply(optim_traj2, function(vecotr) vecotr[(N_tp+1):104])
+optim_traj2 <- unlist(optim_traj2)
+optim_traj2 <- data.frame(cases = optim_traj2, 
+                          season = rep(c(1:len_indx), each = N_tp))
+
+ref_traj2 <- rsv_dataset %>% 
+  filter(regions == paste0("Region ",region_number)) %>% 
+  filter(season == "2010-2011")
+
+
+prediction_df2 <- data.frame(date = rep(ref_traj2$date, length.out = N_tp*len_indx), 
+                             cases = optim_traj2$cases, 
+                             my_group = optim_traj2$season) %>% 
+  group_by(my_group) %>% 
+  mutate(normalised_cases = cases/max(cases)) %>% 
+  mutate(scaled_cases = cases/scaling_factor$total_number_test[1:N_tp]) %>% 
+  mutate(scaled_cases2 = cases * reporting_fraction)
+
+data_df2 <- data.frame(date = ref_traj2$date, 
+                       cases2 = ref_traj2$scaled.cases,
+                       cases3 = ref_traj2$total_number_positive)
+
+prediction_med_df2 <- data.frame(date = ref_traj2$date,
+                                 cases = optim_traj2$cases[(N_tp*closest_to_median_index+1): (N_tp*closest_to_median_index+N_tp)]) %>% 
+  mutate(cases = cases * reporting_fraction)
+
+FT_SIZE = 20
+Figure4B <- ggplot() + 
+  geom_line(data = prediction_df1, aes(date, scaled_cases2, group = my_group, color = "Best 2% Prediction"), linewidth = .8, alpha = 1) +
+  geom_line(data = data_df1, aes(date, cases2, color = "Data"), linewidth = 1) +
+  geom_line(data = prediction_med_df1, aes(date, cases, color = "Median Prediction"), linewidth = 2, alpha = 1) +
+  
+  geom_line(data = prediction_df2, aes(date, scaled_cases2, group = my_group, color = "Best 2% Prediction"), linewidth = .8, alpha = 1) +
+  geom_line(data = data_df2, aes(date, cases2, color = "Data"), linewidth = 1) +
+  geom_line(data = prediction_med_df2, aes(date, cases, color = "Median Prediction"), linewidth = 2, alpha = 1) +
+  
+  geom_line(data = sim_without_interaction, aes(date, cases, color = "No Interference"), linewidth = 2, alpha = 1) + 
+  
+  ylab("RSV incidence") + xlab("Date") +  
+  labs(title = "Model II") + 
+  labs(color = "") + 
+  # scale_y_continuous(breaks=c(0, 0.5, 1),
+  #                  labels=c(0, 0.5, 1)) + 
+  theme_minimal()  + 
+  theme(axis.line = element_line(colour = "black", linewidth = 1)) +
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    plot.title = element_text(face="bold", hjust = 0.5),
+    #axis.line = element_blank(),
+    #panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()) + 
+  scale_color_manual(values = c("Best 1% Prediction" = "#31a354", 
+                                "Best 3% Prediction" = "#a1d99b",
+                                "Best 2% Prediction" = "#d0d1e6",
+                                "Median Prediction" = "#e31a1c", 
+                                "Data" = "black",
+                                "No Interference" = "#31a354")) +
+  theme(legend.key = element_rect(fill = "white", colour = "white"),legend.position = "top") + 
+  theme(axis.text.x = element_text(color="black",
+                                   size = FT_SIZE, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=FT_SIZE, angle=0),
+        text = element_text(size = FT_SIZE)) 
+
+Figure4B
+
+
+
+#ggsave("Figures/M2.pdf", Figure4D, width = 30, height = 18, unit = "in", dpi = 300)
+
+
+
+optimal_eta <- data.frame(eta1 = eta1[optimal_rank])
+# optimal_eta <- optimal_eta %>% 
+#   mutate(group = ifelse(theta1>=0 & theta1 <0.1, 1, 
+#                         ifelse(theta1 >= 0.1 & theta1 <0.2, 2, 
+#                                ifelse(theta1 >= 0.2 & theta1 < 0.3, 3, 
+#                                       ifelse(theta1 >= 0.3 & theta1 <0.4, 4,
+#                                              ifelse(theta1 >=0.4 & theta1 <0.5, 5, 
+#                                                    ifelse(theta1 >= 0.5 & theta1 < 0.6, 6, 
+#                                                           ifelse(theta1 >= 0.6 & theta1 <0.7, 7,
+#                                                                  ifelse(theta1 >= 0.7 & theta1 < 0.8, 8,
+#                                                                         ifelse(theta1 >=0.8 & theta1 <0.9, 9, 10))))))))))
+#0.0006176215
+
+
+Figure4E <- ggplot() +
+  geom_histogram(data = optimal_eta, aes(x = eta1, y = after_stat(count) / max(count)), fill = "#d0d1e6",  bins = 50, color = "#d0d1e6", alpha = .8) +
+  #geom_density(data = optimal_eta, aes(x = theta1, y = after_stat(count) / max(count))) + 
+  stat_ecdf(data = optimal_eta, aes(eta1, color = "color"), geom = "step", lwd = 2) + 
+  geom_vline(aes(xintercept=median(optimal_eta$eta1)),
+             linetype= "dashed", alpha = 1, color = "#e31a1c", lwd = 2) +
+  # geom_vline(aes(xintercept=quantile(optimal_eta$theta1, 0.025)),
+  #            linetype= "dashed", alpha = 1, color = "grey", lwd = 2) +
+  # geom_vline(aes(xintercept=quantile(optimal_eta$theta1, 0.975)),
+  #            linetype= "dashed", alpha = 1, color = "grey", lwd = 2) +
+  theme_minimal()  + 
+  labs(y = "Frequency", 
+       x = TeX("$\\eta$")) + 
+  scale_color_manual(name = NULL,
+                     values = c("color" = "black"),
+                     labels = "CDF") +
+  theme(panel.spacing = unit(1, "lines")) + 
+  guides(fill = "none") + 
+  theme(axis.line = element_line(colour = "black", linewidth  = 1)) +
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    plot.title = element_text(face="bold", hjust = 0.5),
+    #axis.line = element_blank(),
+    #panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "none") + 
+  theme(axis.text.x = element_text(color="black",
+                                   size = FT_SIZE, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=FT_SIZE, angle=0),
+        text = element_text(size = FT_SIZE)) + 
+  xlim(1,3) 
+
+Figure4E
+
+#ggsave("Figures/xi.pdf", Figure4G, width = 30, height = 18, unit = "in", dpi = 300)
+
+# 
+#  
+
+
+
+
+
+# Supplementary Figures # 
+
+
+# optim_traj <- c()
+# index_ranked_trajectories <- order(goodness_of_fit_rsv, decreasing = FALSE)
+# len_indx <- 2000
+# optimal_rank <- index_ranked_trajectories[1:len_indx]
+# optim_traj <- predicted_traj_flu[optimal_rank]
+# optim_traj <- lapply(optim_traj, function(vector) vector[1:N_tp])
+# 
+# 
+# 
+# reporting_fraction_flu <- reporting_fraction #0.000167621
+# optim_traj <- unlist(optim_traj)
+# optim_traj <- data.frame(cases = optim_traj,
+#                          season = rep(c(1:len_indx), each = N_tp))
+# # %>%
+# #   mutate(cases = ifelse(cases<=0,0,cases))
+# 
+# prediction_df <- c()
+# prediction_df <- data.frame(date = rep(ref_traj_flu$date, length.out = N_tp*len_indx),
+#                             wk = rep(c(1:N_tp), length.out = N_tp * len_indx),
+#                             cases = optim_traj$cases,
+#                             my_group = optim_traj$season) %>%
+#   group_by(my_group) %>% 
+#   mutate(normalised_cases = cases/max(cases)) %>% 
+#   mutate(scaled_cases = cases/scaling_factor$total_number_test[1:N_tp]) %>% 
+#   mutate(scaled_cases2 = cases * reporting_fraction_flu)
+# 
+# 
+# 
+# prediction_med_df <- data.frame(date = ref_traj_flu$date,
+#                                 cases = optim_traj$cases[(N_tp*closest_to_median_index+1): (N_tp*closest_to_median_index+N_tp)]) %>% 
+#   mutate(cases = cases * reporting_fraction_flu)
+# 
+# 
+# data_df <- data.frame(date = ref_traj_flu$date, 
+#                       cases = ref_traj_flu$scaled.cases.pdm,
+#                       cases2 = ref_traj_flu$total_number_positive.pdm)
+# 
+# 
+# 
+# 
+# 
+# optim_traj2 <- predicted_traj_flu[optimal_rank]
+# optim_traj2 <- lapply(optim_traj2, function(vecotr) vecotr[(N_tp+1):104])
+# optim_traj2 <- unlist(optim_traj2)
+# optim_traj2 <- data.frame(cases = optim_traj2, 
+#                           season = rep(c(1:len_indx), each = N_tp))
+# 
+# ref_traj2 <- flu_dataset %>% 
+#   filter(regions == paste0("Region ",region_number)) %>% 
+#   filter(season == "2010-2011")
+# 
+# 
+# prediction_df2 <- data.frame(date = rep(ref_traj2$date, length.out = N_tp*len_indx), 
+#                              cases = optim_traj2$cases, 
+#                              my_group = optim_traj2$season) %>% 
+#   group_by(my_group) %>% 
+#   mutate(normalised_cases = cases/max(cases)) %>% 
+#   mutate(scaled_cases = cases/scaling_factor$total_number_test[1:N_tp]) %>% 
+#   mutate(scaled_cases2 = cases * reporting_fraction)
+# 
+# data_df2 <- data.frame(date = ref_traj2$date, 
+#                        cases2 = ref_traj2$scaled.cases.pdm,
+#                        cases3 = ref_traj2$total_number_positive.pdm)
+# 
+# prediction_med_df2 <- data.frame(date = ref_traj2$date,
+#                                  cases = optim_traj2$cases[(N_tp*closest_to_median_index+1): (N_tp*closest_to_median_index+N_tp)]) %>% 
+#   mutate(cases = cases * reporting_fraction)
+
+
+# 
+# 
+# SFigure4A <-  ggplot() +
+#   geom_line(data = prediction_df, aes(date, scaled_cases2, group = my_group, color = "Best 2% Prediction"), linewidth = .2, alpha = 1) +
+#   #geom_line(data = prediction_med_df, aes(date, cases, color = "Median Prediction"), linewidth = 1.5, alpha = 1) +
+#   geom_line(data = data_df, aes(date, cases2, color = "Data"), linewidth = 1) +
+#   
+#   geom_line(data = prediction_df2, aes(date, scaled_cases2, group = my_group, color = "Best 2% Prediction"), linewidth = .8, alpha = 1) +
+#   geom_line(data = data_df2, aes(date, cases2, color = "Data"), linewidth = 1) +
+#   #geom_line(data = prediction_med_df2, aes(date, cases, color = "Median Prediction"), linewidth = 1.5, alpha = 1) +
+#   
+#   ylab("Influenza incidence") + xlab("Date") +
+#   labs(color = "") +
+#   # scale_y_continuous(breaks=c(0, 0.5, 1),
+#   #                  labels=c(0, 0.5, 1)) +
+#   theme_minimal()  + 
+#   theme(axis.line = element_line(colour = "black", linewidth = 1)) +
+#   theme(
+#     axis.text.x = element_text(face="bold"),
+#     axis.text.y = element_text(face="bold"),
+#     axis.title.x = element_text(face="bold"),
+#     axis.title.y = element_text(face="bold"),
+#     plot.title = element_text(face="bold", hjust = 0.5),
+#     #axis.line = element_blank(),
+#     #panel.grid.major = element_blank(),
+#     panel.grid.minor = element_blank()) + 
+#   scale_color_manual(values = c("Best 1% Prediction" = "#31a354", 
+#                                 "Best 3% Prediction" = "#a1d99b",
+#                                 "Best 2% Prediction" = "#d0d1e6",
+#                                 "Median Prediction" = "#e31a1c", 
+#                                 "Data" = "black")) +
+#   theme(legend.key = element_rect(fill = "white", colour = "white"),legend.position = "top") + 
+#   theme(axis.text.x = element_text(color="black",
+#                                    size = 30, angle=0),
+#         axis.text.y = element_text(color="black",
+#                                    size=30, angle=0),
+#         text = element_text(size = 35)) 
+# 
+#  
+# optimal_intro_time <- data.frame(intro_time = intro_time[optimal_rank])
+# 
+# SFigure4B <- ggplot() +
+#   geom_histogram(data = optimal_intro_time, aes(x = intro_time, y = after_stat(count) / max(count)), fill = "#d0d1e6",  bins = 40, alpha = .8, color = "white") +
+#   stat_ecdf(data = optimal_intro_time, aes(intro_time, color = "color"), geom = "step", lwd = 2) + 
+#   geom_vline(aes(xintercept=median(optimal_intro_time$intro_time)),
+#              linetype= "dashed", alpha = 1, color = "#e31a1c", lwd = 2) +
+#   theme_minimal()  + 
+#   labs(y = "Frequency", 
+#        x = TeX("$\\tau_{flu}$")) + 
+#   scale_color_manual(name = NULL,
+#                      values = c("color" = "black"),
+#                      labels = "CDF") +
+#   theme(panel.spacing = unit(1, "lines")) + 
+#   guides(fill = "none") + 
+#   theme(axis.line = element_line(colour = "black", linewidth  = 1)) +
+#   theme(
+#     axis.text.x = element_text(face="bold"),
+#     axis.text.y = element_text(face="bold"),
+#     axis.title.x = element_text(face="bold"),
+#     axis.title.y = element_text(face="bold"),
+#     plot.title = element_text(face="bold", hjust = 0.5),
+#     #axis.line = element_blank(),
+#     #panel.grid.major = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     legend.position = "none") + 
+#   theme(axis.text.x = element_text(color="black",
+#                                    size = 30, angle=0),
+#         axis.text.y = element_text(color="black",
+#                                    size=30, angle=0),
+#         text = element_text(size = 35)) + 
+#   xlim(110, 114) 
+# 
+# #SFigure4B
+# 
+# optimal_eta <- data.frame(beta_flu = baseline.txn.rate.flu[optimal_rank])
+# 
+# 
+# SFigure4C <- ggplot() +
+#   geom_histogram(data = optimal_eta, aes(x = beta_flu, y = after_stat(count) / max(count)), fill = "#d0d1e6",  bins = 40, alpha = .8, color = "white") +
+#   stat_ecdf(data = optimal_eta, aes(beta_flu, color = "color"), geom = "step", lwd = 2) + 
+#   geom_vline(aes(xintercept=median(optimal_eta$beta_flu)),
+#              linetype= "dashed", alpha = 1, color = "#e31a1c", lwd = 2) +
+#   theme_minimal()  + 
+#   labs(y = "Frequency", 
+#        x = TeX("$\\beta_{flu}$")) + 
+#   scale_color_manual(name = NULL,
+#                      values = c("color" = "black"),
+#                      labels = "CDF") +
+#   theme(panel.spacing = unit(1, "lines")) + 
+#   guides(fill = "none") + 
+#   theme(axis.line = element_line(colour = "black", linewidth  = 1)) +
+#   theme(
+#     axis.text.x = element_text(face="bold"),
+#     axis.text.y = element_text(face="bold"),
+#     axis.title.x = element_text(face="bold"),
+#     axis.title.y = element_text(face="bold"),
+#     plot.title = element_text(face="bold", hjust = 0.5),
+#     #axis.line = element_blank(),
+#     #panel.grid.major = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     legend.position = "none") + 
+#   theme(axis.text.x = element_text(color="black",
+#                                    size = 30, angle=0),
+#         axis.text.y = element_text(color="black",
+#                                    size=30, angle=0),
+#         text = element_text(size = 35)) + 
+#   xlim(2,3) 
+# 
+# 
+# 
+# #ggsave("Figures/Figure4G.pdf", Figure4G, width = 30, height = 18, unit = "in", dpi = 300)
+# 
+# 
+# 
+# 
+# Figure <- ggarrange(SFigure4A, SFigure4B, SFigure4C,
+#                      nrow = 2,
+#                      ncol = 2,
+#                      labels = c("A", "B", "C"),                                  # Labels of the scatter plot
+#                      font.label = list(size = 40, color = "black"))
+# 
+# ggsave("Figures/SFig_M3.jpg", Figure, width = 22, height = 18, unit = "in", dpi = 300)
+# 
+
