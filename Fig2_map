@@ -1,0 +1,62 @@
+
+library(biscale)
+library(cowplot)
+library(sf)
+library(ggplot2)
+library(tidyverse)
+library(gridExtra)
+library(grid)
+
+ 
+
+
+Region1 <- c("Connecticut", "Maine", "Massachusetts", "New Hampshire", "Rhode Island", "Vermont")
+
+Region2 <- c("New Jersey","New York","Puerto Rico","United States Virgin Islands")
+
+Region3 <- c("Delaware","District of Columbia","Maryland","Pennsylvania","Virginia","West Virginia")
+
+Region4 <- c("Alabama","Florida","Georgia","Kentucky","Mississippi","North Carolina","South Carolina","Tennessee")
+
+Region5 <- c("Illinois","Indiana","Michigan","Minnesota","Ohio","Wisconsin")
+
+Region6 <- c("Arkansas","Louisiana","New Mexico","Oklahoma","Texas")
+
+Region7 <- c("Iowa","Kansas","Missouri","Nebraska")
+
+Region8 <- c("Colorado","Montana","North Dakota","South Dakota","Utah","Wyoming")
+
+Region9 <- c("Arizona","California","Hawaii","Nevada")
+
+Region10 <- c("Alaska","Idaho","Oregon","Washington")
+
+
+Regions <- c(Region1, Region2, Region3, Region4, Region5, 
+             Region6, Region7, Region8, Region9, Region10)
+
+
+
+states_map_HHS <- states_map %>% mutate(regions = ifelse(NAME %in% Region1, "Region 1", 
+                                                         ifelse(NAME %in% Region2, "Region 2", 
+                                                                ifelse(NAME %in% Region3, "Region 3", 
+                                                                       ifelse(NAME %in% Region4, "Region 4", 
+                                                                              ifelse(NAME %in% Region5, "Region 5", 
+                                                                                     ifelse(NAME %in% Region6, "Region 6", 
+                                                                                            ifelse(NAME %in% Region7, "Region 7",
+                                                                                                   ifelse(NAME %in% Region8, "Region 8", 
+                                                                                                          ifelse(NAME %in% Region9, "Region 9", 
+                                                                                                                 ifelse(NAME %in% Region10, "Region 10", NA))))))))))) %>% 
+  filter(!is.na(regions)) %>% 
+  mutate(regions = factor(regions, 
+                          levels = paste0("Region ", 1:10))) %>% 
+  arrange(regions) 
+
+fill = rep("#d9d9d9", 10)
+fill[i] = "#003c30"
+
+
+HHS_map <- ggplot() + 
+  geom_sf(data = states_map_HHS, aes(fill = regions), color = "white", size = .6, show.legend = FALSE) + 
+  bi_theme() + 
+  theme_void() + 
+  scale_fill_manual(values = fill)
