@@ -1,0 +1,608 @@
+#install.packages("biscale")
+#install.packages(c("cowplot", "sf"))
+#install.packages("biscale", dependencies = TRUE)
+
+
+library(biscale)
+library(cowplot)
+library(sf)
+library(ggplot2)
+library(tidyverse)
+library(gridExtra)
+library(grid)
+
+
+states_map <-tigris::states(cb = TRUE) %>% 
+  tigris::shift_geometry()
+
+
+Region1 <- c("Connecticut", "Maine", "Massachusetts", "New Hampshire", "Rhode Island", "Vermont")
+
+Region2 <- c("New Jersey","New York","Puerto Rico","United States Virgin Islands")
+
+Region3 <- c("Delaware","District of Columbia","Maryland","Pennsylvania","Virginia","West Virginia")
+
+Region4 <- c("Alabama","Florida","Georgia","Kentucky","Mississippi","North Carolina","South Carolina","Tennessee")
+
+Region5 <- c("Illinois","Indiana","Michigan","Minnesota","Ohio","Wisconsin")
+
+Region6 <- c("Arkansas","Louisiana","New Mexico","Oklahoma","Texas")
+
+Region7 <- c("Iowa","Kansas","Missouri","Nebraska")
+
+Region8 <- c("Colorado","Montana","North Dakota","South Dakota","Utah","Wyoming")
+
+Region9 <- c("Arizona","California","Hawaii","Nevada")
+
+Region10 <- c("Alaska","Idaho","Oregon","Washington")
+
+
+Regions <- c(Region1, Region2, Region3, Region4, Region5, 
+             Region6, Region7, Region8, Region9, Region10)
+
+timing.rsv <- readRDS("code_figures/gravity_rsv.rds")
+timing.rsv <- timing.rsv %>% filter(season != "2006-2007")
+
+onset.rsv <- readRDS("code_figures/onset_rsv.rds")
+
+intensity.rsv <- read_rds("code_figures/intensity_rsv2.rds")
+
+#intensity.rsv %>% ggplot() + geom_point(aes(x= seasons, y= intensity)) + facet_wrap(~regions)
+
+# 
+# p_supp1 <- merge(onset.rsv, gravity.rsv)%>% ggplot() + 
+#   geom_point(aes(x = onset, y = gravity, color = regions), size = 8) + 
+#   labs(title = "",
+#        y = "Centre of gravity (wk)",
+#        x = "Onset time (wk)") +
+#   theme_minimal()  +
+#   theme(axis.text.x = element_text(color="black",
+#                                    size=40, angle=0),
+#         axis.text.y = element_text(color="black",
+#                                    size=40, angle=0))  +
+#   theme(text = element_text(size = 40)) + 
+#   theme(axis.text.x = element_text(color="black", 
+#                                    size=40, angle=0, face = "bold"),
+#         axis.text.y = element_text(color="black", 
+#                                    size=40, angle=0, face = "bold"))  + 
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+#         panel.background = element_blank(), axis.line = element_line(colour = "black")) + 
+#   theme(strip.text = element_text(size = 40, margin = margin(), face = "bold"))
+# 
+
+#ggsave("code_figures/Figures/SFig1.pdf", p_supp1, width = 30, height = 18, unit = "in", dpi = 300)
+
+
+
+
+
+timing_combined_raw <- data.frame(intensity = intensity.rsv$intensity,
+                                  gravity = timing.rsv$gravity,
+                                  season = intensity.rsv$seasons, 
+                                  regions = intensity.rsv$regions)
+
+timing_combined2 <- timing_combined_raw %>% arrange(regions)
+
+my_group <-  rep(c(1,5,2,3,1,5,1,5,1,5,1,5), length.out = 120) # 1 is odd season; 5 is even season; 2 is 2009-10 season, and 3 is 2010-2011 season
+my_group <- factor(my_group, levels = c("1", "2", "3", "4", "5"))
+timing_combined2$group <- my_group
+
+timing_combined <- timing_combined2 %>% 
+  group_by(regions, group) %>% 
+  summarise(median.intensity = median(intensity, na.rm = TRUE), 
+            median.gravity = median(gravity, na.rm = TRUE)) %>% 
+  ungroup()
+
+
+timing_reference_odd <- timing_combined %>% filter(group == "1") %>% 
+  
+  select(regions, median.intensity, median.gravity)
+
+timing_reference_even <- timing_combined %>% filter(group == "5") %>% 
+  select(regions, median.intensity, median.gravity)
+
+timing_reference_R1R4 <- timing_combined2  %>%
+  filter(regions == "Region 1" | regions == "Region 4") %>%
+  filter(group != "2" & group != "3") %>% 
+  group_by(regions) %>%
+  summarise(median.intensity = median(intensity, na.rm = TRUE),
+            median.gravity = median(gravity, na.rm = TRUE)) %>%
+  ungroup()
+
+
+timing_reference_even[1,] <- timing_reference_R1R4[1,]
+timing_reference_even[4,] <- timing_reference_R1R4[2,]
+timing_reference_odd[1,] <- timing_reference_R1R4[1,]
+timing_reference_odd[4,] <- timing_reference_R1R4[2,]
+
+
+timing_qury_1 <- timing_combined_raw %>% filter(season == "2009-2010")
+timing_qury_2 <- timing_combined_raw %>% filter(season == "2010-2011") #%>% select(regions, median.intensity, median.gravity)
+timing_qury_3 <- timing_combined_raw %>% filter(season == "2011-2012") #%>% select(regions, median.intensity, median.gravity)
+#timing_qury_4 <- timing_combined %>% filter(group == "5") %>% select(regions, median.intensity, median.gravity)
+
+df1 <- data.frame(regions = timing_reference_odd$regions, 
+                  intensity.ref = timing_reference_odd$median.intensity,
+                  gravity.ref = timing_reference_odd$median.gravity, 
+                  intensity.qury = timing_qury_1$intensity,
+                  gravity.qury = timing_qury_1$gravity) %>% 
+  mutate(intensity.difference = (intensity.qury - intensity.ref)/intensity.ref * 100,
+         gravity.difference = gravity.qury - gravity.ref)
+
+df2 <- data.frame(regions = timing_reference_even$regions, 
+                  intensity.ref = timing_reference_even$median.intensity,
+                  gravity.ref = timing_reference_even$median.gravity, 
+                  intensity.qury = timing_qury_2$intensity,
+                  gravity.qury = timing_qury_2$gravity) %>% 
+  mutate(intensity.difference = (intensity.qury - intensity.ref)/intensity.ref * 100,
+         gravity.difference = gravity.qury - gravity.ref)
+
+df3 <- data.frame(regions = timing_reference_odd$regions, 
+                  intensity.ref = timing_reference_odd$median.intensity,
+                  gravity.ref = timing_reference_odd$median.gravity, 
+                  intensity.qury = timing_qury_3$intensity,
+                  gravity.qury = timing_qury_3$gravity) %>% 
+  mutate(intensity.difference = (intensity.qury - intensity.ref)/intensity.ref * 100,
+         gravity.difference = gravity.qury - gravity.ref)
+
+# df4 <- data.frame(regions = timing_reference_odd$regions, 
+#                   intensity.ref = timing_reference_odd$median.intensity,
+#                   gravity.ref = timing_reference_odd$median.gravity, 
+#                   intensity.qury = timing_qury_4$median.intensity,
+#                   gravity.qury = timing_qury_4$median.gravity) %>% 
+#   mutate(intensity.difference = intensity.qury - intensity.ref,
+#          gravity.difference = gravity.qury - gravity.ref)
+
+
+states_map_HHS <- states_map %>% mutate(regions = ifelse(NAME %in% Region1, "Region 1", 
+                                                         ifelse(NAME %in% Region2, "Region 2", 
+                                                                ifelse(NAME %in% Region3, "Region 3", 
+                                                                       ifelse(NAME %in% Region4, "Region 4", 
+                                                                              ifelse(NAME %in% Region5, "Region 5", 
+                                                                                     ifelse(NAME %in% Region6, "Region 6", 
+                                                                                            ifelse(NAME %in% Region7, "Region 7",
+                                                                                                   ifelse(NAME %in% Region8, "Region 8", 
+                                                                                                          ifelse(NAME %in% Region9, "Region 9", 
+                                                                                                                 ifelse(NAME %in% Region10, "Region 10", NA))))))))))) %>% 
+  filter(!is.na(regions)) %>% 
+  mutate(regions = factor(regions, 
+                          levels = paste0("Region ", 1:10))) %>% 
+  arrange(regions) 
+
+regions_count <- as.numeric(table(states_map_HHS$regions))
+
+states_map_HHS1 <- states_map_HHS %>% 
+  mutate(X1 = rep(df1$intensity.difference, regions_count),  
+         X2 = rep(df1$gravity.difference, regions_count)) %>% 
+  mutate(X1_norm = 2 * (X1 - min(X1))/(max(X1) - min(X1)) - 1, 
+         X2_norm = 2 * (X2 - min(X2))/(max(X2) - min(X2)) - 1)
+
+
+states_map_HHS2 <- states_map_HHS %>% 
+  mutate(X1 = rep(df2$intensity.difference, regions_count), 
+         X2 = rep(df2$gravity.difference, regions_count)) %>% 
+  mutate(X1_norm = 2 * (X1 - min(X1))/(max(X1) - min(X1)) - 1, 
+         X2_norm = 2 * (X2 - min(X2))/(max(X2) - min(X2)) - 1)
+
+
+states_map_HHS3 <- states_map_HHS %>% 
+  mutate(X1 = rep(df3$intensity.difference, regions_count), 
+         X2 = rep(df3$gravity.difference, regions_count)) %>% 
+  mutate(X1_norm = 2 * (X1 - min(X1))/(max(X1) - min(X1)) - 1, 
+         X2_norm = 2 * (X2 - min(X2))/(max(X2) - min(X2)) - 1)
+
+# 
+# states_map_HHS4 <- states_map_HHS %>% 
+#   mutate(X1 = rep(df4$intensity.difference, regions_count), 
+#          X2 = rep(df4$gravity.difference, regions_count))
+
+
+# custom_pal3 <- c(
+#   "1-1" = "#d3d3d3", # low x, low y
+#   "2-1" = "#ba8890",
+#   "3-1" = "#9e3547", # high x, low y
+#   "1-2" = "#8aa6c2",
+#   "2-2" = "#7a6b84", # medium x, medium y
+#   "3-2" = "#682a41",
+#   "1-3" = "#4279b0", # low x, high y
+#   "2-3" = "#3a4e78",
+#   "3-3" = "#311e3b" # high x, high y
+# )
+
+data1 <- bi_class(states_map_HHS1, x = X1, y = X2, 
+                  style = "quantile", dim = 3)
+data2 <- bi_class(states_map_HHS2, x = X1, y = X2, 
+                  style = "quantile", dim = 3)
+data3 <- bi_class(states_map_HHS3, x = X1, y = X2, 
+                  style = "quantile", dim = 3)
+# data4 <- bi_class(states_map_HHS4, x = X1, y = X2, 
+#                   style = "quantile", dim = 4)
+
+
+n1 <- c()
+n2 <- c()
+for(i in 1:length(data1$X1)){
+  n1[i] <-  ifelse(data1$X1[i] < -5, 1, 
+                   ifelse(data1$X1[i] >= -5 & data1$X1[i] <= 5, 2, 3))
+  
+  
+  n2[i] <-  ifelse(data1$X2[i] < -2, 1, 
+                   ifelse(data1$X2[i] >= -2 & data1$X2[i] <= 2, 2, 3)) 
+  #ifelse(data1$X2[i] >=0 & data1$X2[i] <1, 3, 4)))
+}
+bi_class1 <- paste0(n1,"-",n2)
+
+n1 <- c()
+n2 <- c()
+for(i in 1:length(data2$X1)){
+  n1[i] <-  ifelse(data2$X1[i] < -5, 1, 
+                   ifelse(data2$X1[i] >= -5 & data2$X1[i] <= 5, 2, 3))
+  # ifelse(data2$X1[i] >=0 & data2$X1[i] < 5, 3, 4)))
+  
+  n2[i] <-  ifelse(data2$X2[i] < -2, 1, 
+                   ifelse(data2$X2[i] >= -2 & data2$X2[i] <= 2, 2, 3))
+  #ifelse(data2$X2[i] >=0 & data2$X2[i] <1, 3, 4)))
+}
+bi_class2 <- paste0(n1,"-",n2)
+
+
+
+n1 <- c()
+n2 <- c()
+for(i in 1:length(data3$X1)){
+  n1[i] <-  ifelse(data3$X1[i] < -5, 1, 
+                   ifelse(data3$X1[i] >= -5 & data3$X1[i] <= 5, 2, 3)) 
+  #ifelse(data3$X1[i] >=0 & data3$X1[i] < 5, 3, 4)))
+  
+  n2[i] <-  ifelse(data3$X2[i] < -2, 1, 
+                   ifelse(data3$X2[i] >= -2 & data3$X2[i] <= 2, 2, 3))
+  # ifelse(data3$X2[i] >=0 & data3$X2[i] <1, 3, 4)))
+}
+bi_class3 <- paste0(n1,"-",n2)
+
+
+
+# 
+# n1 <- c()
+# n2 <- c()
+# for(i in 1:length(data3$X1)){
+#   n1[i] <-  ifelse(data4$X1[i] < -1, 1, 
+#                    ifelse(data4$X1[i] >= -1 & data4$X1[i] < 0, 2, 
+#                           ifelse(data4$X1[i] >=0 & data4$X1[i] < 1, 3, 4)))
+#   
+#   n2[i] <-  ifelse(data4$X2[i] >= -3 & data4$X2[i] < -1, 1, 
+#                    ifelse(data4$X2[i] >= -1 & data4$X2[i] < 0, 2, 
+#                           ifelse(data4$X2[i] >=0 & data4$X2[i] < 1, 3, 4)))
+# }
+# bi_class4 <- paste0(n1,"-",n2)
+
+
+
+data1$bi_class <- bi_class1 
+data1 <- data1 %>% 
+  mutate(class_sep = strsplit(bi_class1, '-')) %>% 
+  mutate(class_intensity1 = sapply(class_sep, '[', 1)) %>% 
+  mutate(class_onset1 = sapply(class_sep, '[', 2)) %>% 
+  mutate(class_intensity = ifelse(class_intensity1 == "1", ">5% drop", 
+                                  ifelse(class_intensity1 == "2", "No significant change",
+                                         ifelse(class_intensity1 == "3",  ">5% rise", NA)))) %>% 
+  #ifelse(class_intensity1 == "4",">5% rise", NA ))))) %>% 
+  mutate(class_intensity = factor(class_intensity, 
+                                  levels  = c(">5% drop",
+                                              "No significant change",
+                                              # "<5% rise", 
+                                              ">5% rise"))) %>% 
+  
+  mutate(class_onset = ifelse(class_onset1 == "1", ">2 wk advance", 
+                              ifelse(class_onset1 == "2", "No significant change",
+                                     ifelse(class_onset1 == "3",  ">2 wk delay", NA)))) %>% 
+  #ifelse(class_onset1 == "4",">2 wk delay", NA ))))) %>% 
+  mutate(class_onset = factor(class_onset, 
+                              levels  = c(">2 wk advance",
+                                          # "<1 wk advance",
+                                          "No significant change", 
+                                          ">2 wk delay")))
+
+
+data2$bi_class <- bi_class2
+data2 <- data2 %>% 
+  mutate(class_sep = strsplit(bi_class2, '-')) %>% 
+  mutate(class_intensity1 = sapply(class_sep, '[', 1)) %>% 
+  mutate(class_onset1 = sapply(class_sep, '[', 2)) %>% 
+  mutate(class_intensity = ifelse(class_intensity1 == "1", ">5% drop", 
+                                  ifelse(class_intensity1 == "2", "No significant change",
+                                         ifelse(class_intensity1 == "3",  ">5% rise", NA)))) %>% 
+  #ifelse(class_intensity1 == "4",">5% rise", NA ))))) %>% 
+  mutate(class_intensity = factor(class_intensity, 
+                                  levels  = c(">5% drop",
+                                              "No significant change",
+                                              # "<5% rise", 
+                                              ">5% rise"))) %>% 
+  
+  mutate(class_onset = ifelse(class_onset1 == "1", ">2 wk advance", 
+                              ifelse(class_onset1 == "2", "No significant change",
+                                     ifelse(class_onset1 == "3",  ">2 wk delay", NA)))) %>% 
+  #ifelse(class_onset1 == "4",">2 wk delay", NA ))))) %>% 
+  mutate(class_onset = factor(class_onset, 
+                              levels  = c(">2 wk advance",
+                                          # "<1 wk advance",
+                                          "No significant change", 
+                                          ">2 wk delay")))
+
+
+data3$bi_class <- bi_class3
+data3 <- data3 %>% 
+  mutate(class_sep = strsplit(bi_class3, '-')) %>% 
+  mutate(class_intensity1 = sapply(class_sep, '[', 1)) %>% 
+  mutate(class_onset1 = sapply(class_sep, '[', 2)) %>% 
+  mutate(class_intensity = ifelse(class_intensity1 == "1", ">5% drop", 
+                                  ifelse(class_intensity1 == "2", "No significant change",
+                                         ifelse(class_intensity1 == "3",  ">5% rise", NA)))) %>% 
+  #ifelse(class_intensity1 == "4",">5% rise", NA ))))) %>% 
+  mutate(class_intensity = factor(class_intensity, 
+                                  levels  = c(">5% drop",
+                                              "No significant change",
+                                              # "<5% rise", 
+                                              ">5% rise"))) %>% 
+  
+  mutate(class_onset = ifelse(class_onset1 == "1", ">2 wk advance", 
+                              ifelse(class_onset1 == "2", "No significant change",
+                                     ifelse(class_onset1 == "3",  ">2 wk delay", NA)))) %>% 
+  #ifelse(class_onset1 == "4",">2 wk delay", NA ))))) %>% 
+  mutate(class_onset = factor(class_onset, 
+                              levels  = c(">2 wk advance",
+                                          # "<1 wk advance",
+                                          "No significant change", 
+                                          ">2 wk delay")))
+
+# 
+# 
+# custom_pal4 <- c(
+#   "1-1" = "#d3d3d3", # low x, low y
+#   "2-1" = "#c2a0a6",
+#   "3-1" = "#b16d79",
+#   "4-1" = "#9e3547", # high x, low y
+#   "1-2" = "#a3b5c7",
+#   "2-2" = "#96899d",
+#   "3-2" = "#895e72",
+#   "4-2" = "#7a2d43",
+#   "1-3" = "#7397bb",
+#   "2-3" = "#697394",
+#   "3-3" = "#604e6b",
+#   "4-3" = "#56263f",
+#   "1-4" = "#4279b0", # low x, high y
+#   "2-4" = "#3c5c8b",
+#   "3-4" = "#373f65",
+#   "4-4" = "#311e3b" # high x, high y
+# )
+# 
+# 
+
+# custom_pal4 <- c(
+#   "1-1" = "#d3d3d3", # low x, low y
+#   "2-1" = "#b6cdcd",
+#   "3-1" = "#97c5c5",
+#   "4-1" = "#75bebe",
+#   #"5-1" = "#52b6b6", # high x, low y
+#   "1-2" = "#cab6c5",
+#   "2-2" = "#aeb0bf",
+#   "3-2" = "#91aab9",
+#   "4-2" = "#70a4b2",
+#  # "5-2" = "#4e9daa",
+#   "1-3" = "#c098b9",
+#   "2-3" = "#a593b3",
+#   "3-3" = "#898ead",
+#   "4-3" = "#6b89a6",
+#   #"5-3" = "#4a839f",
+#  "1-4" = "#4279b0", # low x, high y
+#  "2-4" = "#3c5c8b",
+#  "3-4" = "#373f65",
+#  "4-4" = "#311e3b" ,
+#  "5-4" = "#476993",
+#  "1-5" = "#ad5b9c", # low x, high y
+#  "2-5" = "#955898",
+#  "3-5" = "#7c5592",
+#  "4-5" = "#60528d",
+#  "5-5" = "#434e87" )# high x, high y
+
+
+
+my_palette1 <- c(">5% drop" = "#d8b365", "No significant change" = "#d9d9d9", ">5% rise" = "#5ab4ac")#, ">5% rise" = "#4e9daa")
+my_palette2 <- c(">2 wk advance" = "#ef8a62" ,"No significant change" = "#d9d9d9", ">2 wk delay" = "#67a9cf")#, ">2 wk delay" = "#434e87")
+
+# dim = 2 --> 2 x 2 
+
+custom_palette_intensity <- colorRampPalette(c("#8c510a", "#bf812d", "#dfc27d", "#f5f5f5", "#80cdc1",
+                                     "#35978f", "#01665e"))
+
+# 
+# custom_palette_gravity <- colorRampPalette(c("#f46d43", "#fdae61", "#fee090", "#f5f5f5", "#abd9e9",
+#                                                "#74add1", "#4575b4"))
+
+
+map1 <- ggplot(data1) + 
+  geom_sf(data = data1, mapping = aes(fill = X1_norm), color = "white", size = .1, show.legend = F) +
+  # scale_fill_viridis_c(option = "viridis", 
+  #                      breaks = c(-1, 0, 1), 
+  #                      labels = c("-1", "0", "1")) +
+  scale_fill_gradientn(colors = custom_palette_intensity(7), breaks = c(-1, 0, 1), 
+                       labels = c("Drop", "", "Rise")) +
+  labs(x = "2009/10") +
+  bi_theme() + 
+  theme(legend.position="top", legend.direction="horizontal",
+        legend.title=element_text(colour="black",size = 25),
+        legend.text=element_text(colour="black", size = 25)) + 
+  labs(fill = "RSV intensity") +
+  guides(fill = guide_colorbar(title = "RSV intensity", title.position = "top", title.hjust = .5)) + 
+  theme(legend.text = element_text(size = 30),  # Change the legend text size
+        legend.key.size = unit(2, "cm"))  + 
+  theme(text = element_text(size = 40)) 
+
+ # legend_intensity <- cowplot::get_legend(map1)
+ # saveRDS(legend_intensity, "legend_intensity_2.rds")
+ 
+
+#  
+# map4 <- ggplot(data1) + 
+#   geom_sf(data = data1, mapping = aes(fill = X2_norm), color = "white", size = .1, show.legend = TRUE) +
+#   # bi_scale_fill(pal = custom_pal4, dim = 4) +
+#   scale_fill_gradientn(colors = custom_palette_gravity(7), breaks = c(-1, 0, 1), 
+#                        labels = c("Advance", "", "Delay")) +
+#   labs(x = "2009/10") +
+#   bi_theme() + 
+#   theme(legend.position="top", legend.direction="horizontal",
+#         legend.title=element_text(colour="black",size = 15, face = "bold"),
+#         legend.text=element_text(colour="black", size = 15, face="bold")) + 
+#   labs(fill = "RSV peaking time") +
+#   guides(fill = guide_colorbar(title = "RSV peaking time"))
+
+
+map4 <- ggplot(data1) +
+  geom_sf(data = data1, mapping = aes(fill = class_onset), color = "white", size = .1, show.legend = FALSE) +
+  # bi_scale_fill(pal = custom_pal4, dim = 4) +
+  scale_fill_manual(values = my_palette2) +
+  labs(x = "2009/10") +
+  bi_theme() +
+  guides(fill = guide_legend(title = "RSV peak timing")) +
+  theme(
+    legend.position = "right",  # Position of the legend
+    legend.text = element_text(size = 30),  # Font size of the legend labels
+    legend.title = element_text(size = 30)  # Font size of the legend title
+  ) + 
+  theme(text = element_text(size = 40)) 
+
+# 
+#  legend_timing <- cowplot::get_legend(map4_plus)
+#  saveRDS(legend_timing, "legend_timing_all.rds")
+
+legend_timing <- readRDS("legend_timing_all.rds")
+
+map2 <- ggplot(data2) + 
+  geom_sf(data = data2, mapping = aes(fill = X1_norm), color = "white", size = .1, show.legend = FALSE) +
+  #bi_scale_fill(pal = custom_pal4, dim = 4) +
+  #scale_fill_manual(values = my_palette1) + 
+  scale_fill_gradientn(colors = custom_palette_intensity(7)) + 
+  labs(x = "2010/11") +
+  bi_theme() + 
+  theme(text = element_text(size = 40)) 
+
+map5 <- ggplot(data2) + 
+  geom_sf(data = data2, mapping = aes(fill = class_onset), color = "white", size = .1, show.legend = FALSE) +
+  #bi_scale_fill(pal = custom_pal4, dim = 4) +
+  scale_fill_manual(values = my_palette2) + 
+  #scale_fill_gradientn(colors = custom_palette_gravity(7)) +
+  labs(x = "2010/11") +
+  bi_theme() + 
+  theme(text = element_text(size = 40)) 
+
+
+
+
+
+map3_plus <- ggplot(data3) + 
+  geom_sf(data = data3, mapping = aes(fill = class_intensity), color = "white", size = .6, show.legend = TRUE) +
+  #bi_scale_fill(pal = custom_pal4, dim = 4) +
+  scale_fill_manual(values = my_palette1) + 
+  labs(x = "2011/12") +
+  bi_theme() + 
+  guides(fill = guide_legend(title = "RSV intensity")) +
+  theme(
+    legend.position = "right",  # Position of the legend
+    legend.text = element_text(size = 30),  # Font size of the legend labels
+    legend.title = element_text(size = 30)  # Font size of the legend title
+  ) +  
+  theme(text = element_text(size = 40)) 
+
+legend_intensity <- cowplot::get_legend(map3_plus)
+
+
+
+map3 <- ggplot(data3) + 
+  geom_sf(data = data3, mapping = aes(fill = class_intensity), color = "white", size = .6, show.legend = FALSE) +
+  #bi_scale_fill(pal = custom_pal4, dim = 4) +
+  scale_fill_manual(values = my_palette1) + 
+  labs(x = "2011/12") +
+  bi_theme() + 
+  theme(text = element_text(size = 40)) 
+
+
+map6 <- ggplot(data3) + 
+  geom_sf(data = data3, mapping = aes(fill = class_onset), color = "white", size = .6, show.legend = FALSE) +
+  #bi_scale_fill(pal = custom_pal4, dim = 4) +
+  scale_fill_manual(values = my_palette2) + 
+  labs(x = "2011/12") +
+  bi_theme() + 
+  theme(text = element_text(size = 40)) 
+
+
+
+
+
+
+
+
+# labels <- list(bi_x = c("<-10%", 
+#                          "[-10%,0)",
+#                          "[0,10%)",
+#                         ">=10%"),
+#                 bi_y = c("<-1", 
+#                          "[-1,0)",
+#                          "[0,1)",
+#                          ">=1"))
+
+
+# labels <- list(bi_x = c(">5% drop", 
+#                         "<5% drop",
+#                         "<5% rise",
+#                         ">5% rise"),
+#                bi_y = c(">2 wk advance", 
+#                         "<1 wk advance",
+#                         "<1 wk delay",
+#                         ">2 wk delay"))
+# 
+# 
+# legend <- bi_legend(pal = custom_pal4,
+#                     dim = 4,
+#                     xlab = "Intensity",
+#                     ylab = "Peak time (week)",
+#                     size = 27,
+#                     breaks = labels,
+#                     arrows = FALSE)
+
+
+gp1<-ggplotGrob(map1)
+gp2<-ggplotGrob(map2)
+gp3<-ggplotGrob(map3)
+gp4<-ggplotGrob(map4)
+gp5<-ggplotGrob(map5)
+gp6<-ggplotGrob(map6)
+# gp7 <- ggplotGrob(legend1)
+# gp8 <- ggplotGrob(legend2)
+
+legend_intensity2 <- readRDS("legend_intensity_2.rds")
+# my_grob <- legend_timing
+legend_timing <- editGrob(legend_timing, gp = gpar(fontsize = 50))
+
+g1 <- arrangeGrob(legend_intensity2,legend_timing, gp1,gp4,gp2,gp5, nrow = 3, ncol= 2, widths=c(2,2))
+g2 <- arrangeGrob(legend_intensity, legend_timing, gp3, gp6, nrow = 2, ncol= 2, widths=c(2,2))
+
+
+#  
+ggsave("Paper_figures/Figure3.pdf", g1, width = 23, height = 18, unit = "in", dpi = 300)
+ggsave("Paper_figures/SFigure3.jpg", g2, width = 23, height = 18, unit = "in", dpi = 300)
+#
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
