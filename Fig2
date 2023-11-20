@@ -1,0 +1,439 @@
+library(factoextra)
+library(ggdendro)
+source("dendro_data_k.R")
+source("plot_ggdendro.R")
+source("set_labels_params.R")
+
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+library(viridis)  
+library(dplyr)
+library(zoo)
+library(openxlsx)
+library(lubridate)
+library(MASS)
+library(wesanderson)
+library(RColorBrewer)
+library(mgcv)
+library(pspline.inference)
+library(dtw)
+library(proxy)
+library(dendextend)
+library(ggdendro)
+library(plotly)
+library(tseries) # bootstrap
+library(dtwclust) # cluster time series with dynamic time warping
+library(gridExtra)
+library(grid)
+library(lattice)
+library(cowplot)
+
+rsv <- readRDS("code_figures/clean_data_rsv.rds")
+
+
+
+#cols <- c("#d9d9d9", "#d9d9d9", "#1f78b4", "#e31a1c", "#6a3d9a", "brown4")
+
+cols <- c("grey70", "grey70", "#1f78b4", "#e31a1c", "#6a3d9a", "brown4")
+
+#cols <- c("#d9d9d9", "#d9d9d9", "#1f78b4", "#e31a1c", "#6a3d9a")
+#cols2 <- c("#a9a9a9", "darkolivegreen3", "goldenrod3", "dodgerblue1", "black", "brown4")
+
+#upload timing (i.e., onset, center gravity and offset for RSV)
+#timing.rsv <- read_rds("code_figures/timing_rsv.rds")
+#onset.rsv <- timing.rsv[c(1,4,5)]
+#offset.rsv <- timing.rsv[c(2,4,5)]
+ 
+
+#gravity.rsv <-  timing.rsv[c(3,4,5)]
+
+#intensity.rsv <- readRDS("rsv_intensity.rds")
+
+
+#visualize timing
+# ggplot() + 
+#   geom_point(data = gravity.rsv, aes(x = season, y = gravity)) + 
+#   geom_point(data = onset.rsv, aes(x = season, y = onset), color = "goldenrod4") + 
+#   geom_point(data = offset.rsv, aes(x = season, y = offset), color = "dodgerblue3") + 
+#   facet_wrap(~regions)
+
+
+
+
+
+rank_list <- list()
+region_name <- c("Region 1: CT, ME, MA, NH, RI, VT",
+                 "Region 2: NJ, NY, PR, VI",
+                 "Region 3: DE, DC, MD, PA, VA, WV",
+                 "Region 4: AL, FL, GA, KY, MS, NC, SC, TN",
+                 "Region 5: IL, IN, MI, MN, OH, WI",
+                 "Region 6: AR, LA, NM, OK, TX",
+                 "Region 7: IA, KS, MO, NE",
+                 "Region 8: CO, MT, ND, SD, UT, WY ",
+                 "Region 9: AZ, CA, HI, NV",
+                 "Region 10: AK, ID, OR, WA")
+
+k <-  3
+
+window.size <- c()
+
+if(k == 3){
+  window.size = 47
+} else if(k == 4| k == 5) {
+  window.size = 8
+} else if(k == 2) {
+  window.size = 6
+}
+ 
+
+season <-  c( "2007-2008", "2008-2009",
+            "2009-2010", "2010-2011", "2011-2012",
+            "2012-2013", "2013-2014", "2014-2015",
+            "2015-2016", "2016-2017", "2017-2018",
+            "2018-2019")
+          
+
+# rsv_plot <- rsv %>% group_by(season, regions) %>% 
+# mutate(Weight = (cases - mean(cases))/sd(cases) ) %>% 
+# ggplot() +
+#   geom_line(aes(x = wk, y = Weight, color = season)) +
+#   facet_wrap(~regions)
+
+# 
+# ggplot() + 
+#   geom_line(data = ts_region1, aes(x = wk, y= scale(cases), color = season)) 
+
+#optimal_w <- readRDS("optimal_w.rds")
+
+
+
+p_plot <- list()
+
+states_map <-tigris::states(cb = TRUE) %>% 
+  tigris::shift_geometry()
+
+for(i in 1:10){ 
+    
+      ts_region1 <- rsv %>%
+      filter(regions == paste0("Region ",i)) %>% 
+      filter(season != "2006-2007")
+    
+    
+      ts_region1 <- ts_region1 %>% 
+      group_by(season) %>% 
+      #mutate(Weight = (cases - mean(cases))/sd(cases) ) %>% 
+      mutate(Weight = scaled.cases) %>% 
+      ungroup()
+    
+   
+ 
+    
+    ts_region1_df <- cbind(subset(ts_region1$Weight, ts_region1$season==season[1]), 
+                           subset(ts_region1$Weight, ts_region1$season==season[2]),
+                           subset(ts_region1$Weight, ts_region1$season==season[3]),
+                           subset(ts_region1$Weight, ts_region1$season==season[4]), 
+                           subset(ts_region1$Weight, ts_region1$season==season[5]),
+                           subset(ts_region1$Weight, ts_region1$season==season[6]),
+                           subset(ts_region1$Weight, ts_region1$season==season[7]), 
+                           subset(ts_region1$Weight, ts_region1$season==season[8]),
+                           subset(ts_region1$Weight, ts_region1$season==season[9]),
+                           subset(ts_region1$Weight, ts_region1$season==season[10]), 
+                           subset(ts_region1$Weight, ts_region1$season==season[11]),
+                           subset(ts_region1$Weight, ts_region1$season==season[12]))
+  
+  ts_region1_df <- as.data.frame(ts_region1_df)
+  names(ts_region1_df) <- factor(c( "2007/08", "2008/09",
+                            "2009/10", "2010/11", "2011/12",
+                            "2012/13", "2013/14", "2014/15",
+                            "2015/16", "2016/17", "2017/18",
+                            "2018/19"), 
+                            levels = c( "2007/08", "2008/09",
+                                        "2009/10", "2010/11", "2011/12",
+                                        "2012/13", "2013/14", "2014/15",
+                                        "2015/16", "2016/17", "2017/18",
+                                        "2018/19"))
+  
+  # 
+  # cluster_dtw_h2 <- dtwclust::tsclust(t(ts_region1_df), 
+  #                                     type = "h", 
+  #                                     k = 3,  
+  #                                     distance = "dtw", 
+  #                                     control = hierarchical_control(method = "ward.D"),
+  #                                     preproc = NULL, 
+  #                                     args = tsclust_args(dist = list(window.size = 10L)))
+  # 
+  
+  
+  d <- as.data.frame(matrix(0,nrow= 12, ncol = 12))
+  
+  names(d) <- factor(c( "2007/08", "2008/09",
+                "2009/10", "2010/11", "2011/12",
+                "2012/13", "2013/14", "2014/15",
+                "2015/16", "2016/17", "2017/18",
+                "2018/19"), 
+                levels = c( "2007/08", "2008/09",
+                            "2009/10", "2010/11", "2011/12",
+                            "2012/13", "2013/14", "2014/15",
+                            "2015/16", "2016/17", "2017/18",
+                            "2018/19"))
+  
+  
+  for(n in 1:12){
+    for(m in 1:12){
+      alignment <- dtw((ts_region1_df[n]), (ts_region1_df[m]), 
+                       window.type= "sakoechiba", 
+                       window.size = window.size,
+                       step.pattern = symmetricP1)
+      
+      d[n,m] <- alignment$distance
+    }
+  }
+  
+  
+  
+  
+  
+  #d1 <- dist(t(ts_region1_df), method = "dtw")
+  hc1 <- hclust(as.dist(d), method  = "ward.D2")
+  #sub_grp <- cutree(hc1, k = k)
+  
+  sub_grp <- c(1,1,2,3,1,rep(1,7))
+  
+  names(sub_grp) <- c( "2007/08", "2008/09",
+                       "2009/10", "2010/11", "2011/12",
+                       "2012/13", "2013/14", "2014/15",
+                       "2015/16", "2016/17", "2017/18",
+                       "2018/19")
+  
+  rank_list[[i]] <- factor(as.numeric(sub_grp))
+ 
+  hcdata <- dendro_data_k(hc1, 3)
+  source("trans_hcdata.R")
+  
+  rsv_cluster <- rsv %>% filter(regions == paste0("Region ",i)) %>%
+    filter(season != "2006-2007") %>% 
+    filter(season %in% season) 
+  
+  rsv_cluster <- rsv_cluster %>% mutate(cluster = rep(rank_list[[i]], 
+                                                      c(as.numeric(table(rsv_cluster$season)))))
+    
+  
+  
+  
+  
+  
+  
+  # 
+  # my_color <- c()
+  # if(i == 1){
+  #   my_color = cols2
+  # } else{
+  #     my_color = cols
+  # }
+  
+  
+  
+  p1 <- plot_ggdendro(hcdata,
+                   direction   = "tb",
+                   fan = FALSE,
+                   scale.color = cols,
+                   label.size  = 7,
+                   branch.size = 1.5,
+                   expand.y    = 0.5) + 
+    theme_void() + 
+    expand_limits(x = c(-1, 5))  
+
+p1
+
+  
+p2 <- rsv_cluster %>% 
+   # filter(season == "2007-2008") %>% 
+    ggplot() +
+    geom_line(aes(x = wk, y = scaled.cases/1000, color = cluster, group = season), size = 2) +
+    scale_color_manual(values=cols[-1]) +
+  labs(title = region_name[i],
+       y = "RSV incidence per 1000",
+       x = "Week") +
+  theme_minimal() +
+  theme(legend.position="NA", legend.direction="vertical",
+        legend.title=element_blank(),
+        legend.text=element_text(colour="black", size = 15, face="bold"),
+        legend.key.height=grid::unit(8, "mm"),
+        legend.key.width=grid::unit(4, "mm"),
+        strip.text.x = element_text(size = 25, color = "black", face = "bold"),
+        plot.title = element_text(hjust = 0.5),
+        text = element_text(size = 25))  +
+  theme(axis.text.x = element_text(color="black",
+                                   size=25, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=25, angle=0))  +
+  theme(panel.grid.major = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+p2
+
+# 
+#   p3 <- onset.rsv.cluster %>% group_by(cluster) %>% summarise(median = median(onset, na.rm = TRUE),
+#                                                                  low = quantile(onset, 0.025, na.rm = TRUE),
+#                                                                  upp = quantile(onset, 0.975, na.rm = TRUE)) %>%
+#     ggplot() +
+#     geom_linerange(aes(x = cluster, ymin = low, ymax = upp, color = cluster), size = 4) + 
+#     geom_point(aes(x = cluster, y =median, color = cluster), size = 10) + 
+#     scale_color_manual(values=cols[-1]) +
+#     labs(title = "",
+#          x = "Cluster",
+#          y = "Onset time (week)") +
+#     theme_minimal() +
+#     theme(axis.text.x = element_text(color="black",
+#                                      size=35, angle=0),
+#           axis.text.y = element_text(color="black",
+#                                      size=35, angle=0),
+#           text = element_text(size = 35))  +
+#     theme(panel.grid.major = element_blank(),
+#           panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+#     theme(plot.title = element_text(hjust = 0.5))   +
+#     ylim(10,40) +
+#     theme(legend.position="NA")
+# 
+#   #
+#   #
+#    p4 <- gravity.rsv.cluster %>% group_by(cluster) %>% summarise(median = median(gravity, na.rm = TRUE),
+#                                                                  low = quantile(gravity, 0.025, na.rm = TRUE),
+#                                                                  upp = quantile(gravity, 0.975, na.rm = TRUE)) %>%
+#     ggplot() +
+#     geom_linerange(aes(x = cluster, ymin = low, ymax = upp, color = cluster), size = 4) + 
+#     geom_point(aes(x = cluster, y =median, color = cluster), size = 10) + 
+#     scale_color_manual(values=cols[-1]) +
+#     labs(title = "",
+#          x = "Cluster",
+#          y = "Center of gravity (week)") +
+#     theme_minimal() +
+#     theme(axis.text.x = element_text(color="black",
+#                                      size=35, angle=0),
+#           axis.text.y = element_text(color="black",
+#                                      size=35, angle=0),
+#           text = element_text(size = 35))  +
+#     theme(panel.grid.major = element_blank(),
+#           panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+#     theme(plot.title = element_text(hjust = 0.5))  +
+#      ylim(10,40) + theme(legend.position="NA")
+#    
+#    
+#    
+#    p5 <- intensity.rsv.cluster %>% group_by(cluster) %>% summarise(median = median(intensity, na.rm = TRUE),
+#                                                                  low = quantile(intensity, 0.025, na.rm = TRUE),
+#                                                                  upp = quantile(intensity, 0.975, na.rm = TRUE)) %>%
+#      ggplot() +
+#      geom_linerange(aes(x = cluster, ymin = low, ymax = upp, color = cluster), size = 4) + 
+#      geom_point(aes(x = cluster, y =median, color = cluster), size = 10) + 
+#      scale_color_manual(values=cols[-1]) +
+#      labs(title = "",
+#           x = "Cluster",
+#           y = "Intensity") +
+#      theme_minimal() +
+#      theme(axis.text.x = element_text(color="black",
+#                                       size=35, angle=0),
+#            axis.text.y = element_text(color="black",
+#                                       size=35, angle=0),
+#            text = element_text(size = 35))  +
+#      theme(panel.grid.major = element_blank(),
+#            panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+#      theme(plot.title = element_text(hjust = 0.5))  +
+#      ylim(0,10) + theme(legend.position="NA")
+ 
+
+
+  # onset.rsv.cluster$onset2 <- onset.flu.cluster$onset
+  # onset.rsv.cluster$gravity <- gravity.flu.cluster$gravity
+  # 
+  # gravity.rsv.cluster$onset <- onset.flu.cluster$onset
+  # gravity.rsv.cluster$gravity2 <- gravity.flu.cluster$gravity
+  # 
+  #   ggplot() +
+  #   geom_point(gravity.rsv.cluster, mapping = aes(x = gravity, y = onset, color = cluster), size = 8) +
+  #   geom_smooth(gravity.rsv.cluster, mapping = aes(x = gravity, y = onset), method = "lm", se = TRUE, col = "black") +
+  #   scale_color_manual(values=cols[-1]) +
+  #   labs(title = "",
+  #        x = "RSV onset",
+  #        y = "Influenza onset") +
+  #   theme_minimal() +
+  #   theme(axis.text.x = element_text(color="black",
+  #                                    size=35, angle=0),
+  #         axis.text.y = element_text(color="black",
+  #                                    size=35, angle=0),
+  #         text = element_text(size = 35))  +
+  #   theme(panel.grid.major = element_blank(),
+  #         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  #   theme(plot.title = element_text(hjust = 0.5))   +
+  #   # ylim(10,40) +
+  #   # xlim(20,30) +
+  #   theme(legend.position="NA")
+
+
+
+# 
+#   gp1<-ggplotGrob(p1)
+#   gp2<-ggplotGrob(p2)
+#   gp3<-ggplotGrob(p3)
+#   gp4<-ggplotGrob(p4)
+#   gp5<-ggplotGrob(p5)
+  # gp5 <- ggplotGrob(p5)
+  # gp6 <- ggplotGrob(p6)
+  # gp7 <- ggplotGrob(p7)
+  # gp8 <- ggplotGrob(p8)
+  #grid.arrange(gp3,   ncol= 1,  top= textGrob(region_name[i], gp=gpar(fontsize=25,font=9))) 
+  
+  #save
+   #g <- arrangeGrob(gp1,gp2,gp3,gp4,gp5, ncol= 3, widths=c(4,4,4), top= textGrob(region_name[i], gp=gpar(fontsize=25,font=9)))
+   #ggsave(paste0("code_figures/cluster_plot/RSV/combined/R",i,".pdf"), g, width = 30, height = 18, unit = "in", dpi = 300)
+  #
+   #ggsave(paste0("code_figures/cluster_plot/RSV/Cluster_tree/cluster_R",i,".pdf"), p1, width = 22, height = 18, unit = "in", dpi = 300)
+   #ggsave(paste0("code_figures/cluster_plot/RSV/time_series/ts_R",i,".pdf"), p2, width = 22, height = 18, unit = "in", dpi = 300)
+   #ggsave(paste0("code_figures/cluster_plot/RSV/timing/onset_R",i,".pdf"), p3, width = 22, height = 18, unit = "in", dpi = 300)
+   #ggsave(paste0("code_figures/cluster_plot/RSV/timing/gravity_R",i,".pdf"), p4, width = 22, height = 18, unit = "in", dpi = 300)
+ 
+   
+   
+   
+   rectangle <- rectGrob(gp=gpar(col="grey2", fill=NA, lwd=2, lty =2))
+   
+   source("code_figures/Figure2_map.R")
+   # Embed p1 into p2 with a rectangle around it
+   p_plot[[i]] <- p2 +
+     annotation_custom(
+       grob = ggplotGrob(p1),
+       xmin = 0, xmax = 20, ymin = 2*max(rsv_cluster$scaled.cases/1000)/4 , ymax = max(rsv_cluster$scaled.cases/1000)
+     ) +
+     annotation_custom(
+       grob = rectangle,
+       xmin = 0, xmax = 20, ymin = 2*max(rsv_cluster$scaled.cases/1000)/4 , ymax = max(rsv_cluster$scaled.cases/1000)
+     ) + 
+     annotation_custom(
+       grob = ggplotGrob(HHS_map), 
+       xmin = 0, xmax = 20, ymin = .8*max(rsv_cluster$scaled.cases/1000)/4 , ymax = 1.8*max(rsv_cluster$scaled.cases/1000)/4
+     ) 
+   
+}
+
+  gp1<-ggplotGrob(p_plot[[1]])
+  gp4<-ggplotGrob(p_plot[[4]])
+  gp8<-ggplotGrob(p_plot[[8]])
+  gp10<-ggplotGrob(p_plot[[10]])
+
+  gp2 <- ggplotGrob(p_plot[[2]])
+  gp3 <- ggplotGrob(p_plot[[3]])
+  gp5 <- ggplotGrob(p_plot[[5]])
+  gp6 <- ggplotGrob(p_plot[[6]])
+  gp7 <- ggplotGrob(p_plot[[7]])
+  gp9 <- ggplotGrob(p_plot[[9]])
+ 
+  
+ g <- arrangeGrob(gp1,gp4,gp8,gp10, ncol= 2, widths=c(4,4))
+ #g2 <- arrangeGrob(gp2,gp3,gp5,gp6,gp7,gp9, nrow = 3, ncol= 2, widths=c(4,4))
+ 
+ggsave("code_figures/Figures/Figure2_two_seasons_prez3.png", g, width = 30, height = 18, unit = "in", dpi = 300)
+   
