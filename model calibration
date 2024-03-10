@@ -1,0 +1,177 @@
+library(tidyr)
+library(deSolve)
+library(dplyr)
+library(zoo)
+source("pathogen_model.R")
+#source("Model_simulation.R")
+#source("prepare_data.R")
+#source("fitmodel.R")
+
+set.seed(1250)
+
+fitmodel <- function(parameters, dat) {
+  
+  
+  b1 <- parameters[1] # seasonal amplitude
+  trans <- parameters[2] # seasonal peak offset
+  h1 <- parameters[3] # reporting fraction 
+  
+  #protrans <- parameters[4]
+  
+  # transformed parameters
+  # ensure positive
+  
+  Amp <- exp(b1)  
+  phi <- (2*pi*(exp(trans))) / (1+exp(trans))
+  reporting_fraction <- exp(h1)
+  #baseline.txn.rate <- exp(protrans) #ensure positive
+  
+  Amp <<- Amp
+  phi <<- phi
+  reporting_fraction <<- reporting_fraction
+  #baseline.txn.rate <<- baseline.txn.rate
+  
+  results <- ode(y = yinit.vector, t = my_times,  
+                 func = pathogen_model, 
+                 parms = c(my_parmset,
+                           Amp = Amp,
+                           phi = phi,
+                           reporting_fraction = reporting_fraction)
+                            
+  )
+  
+  
+  burnN <- 63 * 52  # burn-in time
+  
+  results.burned <- results[-c(1:burnN),]
+  
+  results.burned.all <- apply(results.burned, 1, sum)
+  
+  #pop.all <- rowSums(results.burned[,-1])
+  
+  infected.cols <- results.burned[,c( grep('Xi1s', colnames(results.burned))[1:21],
+                                      grep('Xi2s', colnames(results.burned))[1:21],
+                                      grep('Xi3s', colnames(results.burned))[1:21],
+                                      grep('Xi4s', colnames(results.burned))[1:21])]
+  
+  infected.all <- apply(infected.cols, 1, sum)
+  
+  
+  infected.all.df <- data.frame(data = infected.all,
+                                season = rep(1:11, each = 52))
+  
+
+  
+ 
+
+  true_value <- infected.all.df$data  
+  
+  data_fit <- dat$total_number_positive[1:572]
+  
+  
+  LLall <- sum(dpois(x = data_fit, 
+                     lambda = true_value * reporting_fraction, 
+                     log = T)
+  ) 
+  
+  
+   #prior
+   # baseline_prior <- dunif(x = baseline.txn.rate, min = 2, max = 3)
+   Amp_prior <-  dgamma(x = Amp, .2, 1, log = T)#dunif(x = Amp, min = 0, max = 1, log = T)
+   #reporting_fraction_prior <- dunif(x = reporting_fraction, min = 0, max = 1)
+   phi_prior <-  dgamma(x = phi, .2, 2, log = T)
+   #dunif(x = phi, min = 0, max = 1, log = T)
+
+  
+  #total Loglikelihood (because of log, we sum up)
+  LL <- LLall  + Amp_prior + phi_prior
+  
+  return(LL)
+}
+
+
+
+
+ 
+  
+  nn = 1 # select which regions you want to calibrate to models
+  
+  rsv <- readRDS("clean_data_rsv.rds")
+  rsv <- rsv %>% filter(regions == paste0("Region ", nn)) 
+    
+  source("Model_simulation.R")
+  
+  
+  fitLL <- optim(par=c(-1.6, .1, -1.6), 
+                 # remember to exponential these values # to get the parameter estimates
+                 # starting values for beta and gamma
+                 # - you should get the similar/same result
+                 # no matter which values you choose here
+                 fn = fitmodel, # the distance function to optimise
+                 dat = rsv, # the dataset we fit to
+                 # ("dat" argument is passed to the function specified in fn)
+                 control = list(fnscale=-1)  # negative log likelihood # here we minimize the negative log likelihood
+                 ) 
+  
+  
+ 
+  
+  parms <- c(my_parmset,
+          Amp=exp(fitLL$par[1]),
+          phi=(2*pi*(exp(fitLL$par[2]))) / (1+exp(fitLL$par[2])),
+          reporting_fraction = exp(fitLL$par[3]))
+  
+  
+  
+  
+#### check calibration results ###
+  
+library(tidyverse)
+nn = 1
+source("Model_simulation.R")
+source("pathogen_model.R")
+parms <- readRDS(paste0("RSV_fit_Results/parameter_R", nn, ".rds"))
+ 
+ 
+results <- ode(y = yinit.vector, t = my_times,
+               func = pathogen_model,
+               parms = parms)
+#
+#
+burnN <- 63 * 52  # burn-in time
+
+results.burned <- results[-c(1:burnN),]
+#results.burned <- results.burned[c(105:208), ]
+
+results.burned.all <- apply(results.burned, 1, sum)
+
+
+pop.all <- rowSums(results.burned[,-1])
+
+infected.cols <- results.burned[,c( grep('Xi1s', colnames(results.burned))[1:21],
+                                    grep('Xi2s', colnames(results.burned))[1:21],
+                                    grep('Xi3s', colnames(results.burned))[1:21],
+                                    grep('Xi4s', colnames(results.burned))[1:21])]
+
+infected.all <- apply(infected.cols, 1, sum)
+
+
+infected.all.df <- data.frame(data = infected.all,
+                              season = rep(1:11, each = 52))
+
+rsv <- readRDS("clean_data_rsv.rds")
+rsv <- rsv %>% filter(regions == paste0("Region ", nn)) %>% 
+  filter(season != "2018-2019") #%>% 
+  #filter(season  == "2009-2010" | season == "2010-2011")
+
+ 
+pred <- infected.all.df  #%>% filter(season == 3)
+
+plot(rsv$date,rsv$scaled.cases, col = "red", type = "l", ylim = c(0,600), lwd = 3, xlab = "Date", ylab = "RSV cases")
+lines(rsv$date, pred$data * parms$reporting_fraction, type = "l", lwd = 3)
+legend("topright", 
+       legend = c("Data", "Fitted value"), 
+       col = c("red", "black"), 
+       lty = c(1, 1),
+       title = "") 
+
