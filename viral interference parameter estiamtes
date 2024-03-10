@@ -1,0 +1,74 @@
+if(!require(dplyr)) install.packages("dplyr", repos = "https://cran.rstudio.com/")
+
+source("two_pathogen_model_initate_set_up.R")
+source("LHS.R")
+source("two_pathogen_model.R")
+
+library(deSolve)
+library(dplyr)
+
+
+ 
+saved_ts <- list()
+#saved_ts_sep_coinf <- list()
+
+parmset_all <- lhs.sample.mt[1:(N_sample_size),]
+N_iter <- N_sample_size
+
+for(n in 1:N_iter){
+  
+parmset <- parmset_all[n,] 
+
+parmset_lhs <- list(theta1 = parmset[1],
+               theta2 = 1,
+               intro_time = parmset[2],
+               baseline.txn.rate.flu = parmset[3],
+               DurationFluImmunity = 230,
+               phi = 5.173572)
+              
+
+parmset_flu <- list(rho3 = rho3,
+                    dur.days.flu = dur.days.flu,
+                    dur.days.flu2 = dur.days.flu2,
+                    burnN = burnN,
+                    phi.flu = 5.804026,
+                    Amp.flu = 0.735444,
+                    sigma4 = 0.8)
+                    
+                    
+parmset_rsv <- list(PerCapitaBirthsYear = PerCapitaBirthsYear,
+                    WidthAgeClassMonth = WidthAgeClassMonth,
+                    um = um,
+                    rho1 = rho1, 
+                    rho2 = rho2, 
+                    dur.days1 = dur.days1,
+                    dur.days2 = dur.days2,
+                    dur.days3 = dur.days3,
+                    yinit.matrix = yinit.matrix,
+                    q = q,
+                    contact = c2,
+                    sigma1 = sigma1, 
+                    sigma2 = sigma2, 
+                    sigma3 = sigma3, 
+                    time.step = "week",
+                    baseline.txn.rate = 8.91,
+                    Amp = 0.1014617,
+                    #phi = 3.327749,
+                    DurationMatImmunityDays = 112)
+
+
+parmset_interaction <- list(eta1 = 1, 
+                            eta2 = 1,
+                            xi1 = 1, 
+                            xi2 = 1)
+              
+
+
+
+
+my_parmset <- c(parmset_lhs, parmset_flu, parmset_rsv, parmset_interaction)
+
+source("forward_simulation.R")
+
+}
+ 
