@@ -1,0 +1,32 @@
+
+if(!require(lhs)) install.packages("lhs", repos = "https://cran.rstudio.com/")
+library(lhs)
+
+set.seed(1250)
+N_sample_size <- 100000 # sampling size for LHS
+N_varied_parameters <- 3
+
+uniform_LHS <- randomLHS(N_sample_size, N_varied_parameters)
+transformed_LHS <- matrix(NA, nrow = nrow(uniform_LHS), ncol = ncol(uniform_LHS))
+
+
+
+transformed_LHS[,1] <- qunif(uniform_LHS[,1], min = 0, max = 1) # theta1 
+transformed_LHS[,2] <- qunif(uniform_LHS[,2], min = 109, max = 113) # intro_time for flu
+transformed_LHS[,3] <- qunif(uniform_LHS[,3], min = 2, max = 3) # beta.flu
+
+
+
+theta1 <- transformed_LHS[,1]
+intro_time <- transformed_LHS[,2]
+baseline.txn.rate.flu <- transformed_LHS[,3]
+ 
+ 
+
+lhs.sample.mt <- matrix(NA, nrow = N_sample_size, ncol = N_varied_parameters)
+lhs.sample.mt[,1] <- theta1
+lhs.sample.mt[,2] <- intro_time
+lhs.sample.mt[,3] <- baseline.txn.rate.flu 
+
+ 
+
